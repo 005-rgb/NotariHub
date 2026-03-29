@@ -1,0 +1,5 @@
+{
+  "name": "NotarisHub",
+  "description": "Multi-tenant management system for Notary offices. Manage staff, access roles, and service packages with secure tenant isolation.",
+  "requestFramePermissions": []
+}
