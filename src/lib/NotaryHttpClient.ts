@@ -71,5 +71,21 @@ export const NotaryHttpClient = {
       },
       body: JSON.stringify(body)
     });
+  },
+
+  delete: async (url: string, headers: any = {}) => {
+    const { tid, uid } = NotaryHttpClient.getContext();
+    return fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': tid,
+        'x-user-id': uid,
+        'x-user-role': localStorage.getItem('userRole') || 'NOTARIS',
+        'x-user-name': 'Siti Aminah',
+        'Authorization': `Bearer ${localStorage.getItem('APP_SESSION_ID_token')}`,
+        ...headers
+      }
+    });
   }
 };

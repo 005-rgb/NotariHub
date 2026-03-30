@@ -587,6 +587,13 @@ async function startServer() {
     res.json(consumer);
   });
 
+  app.delete('/api/consumers/:id', (req, res) => {
+    const idx = folder_list_data.findIndex(c => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Consumer not found' });
+    folder_list_data.splice(idx, 1);
+    res.status(200).json({ success: true, message: 'Consumer and all associated data permanently deleted.' });
+  });
+
   app.get('/api/tenants/:id', (req, res) => {
     // ... existing logic ...
     const tenant = tenants.find(t => t.id === req.params.id);

@@ -24,6 +24,8 @@ import {
   ExternalLink,
   FileText,
   Image as ImageIcon,
+  RotateCcw,
+  Skull,
 } from 'lucide-react';
 import { NotaryHttpClient } from '../lib/NotaryHttpClient';
 import { FolderListItem, UserProfile } from '../types';
@@ -252,7 +254,7 @@ const SkeletonProfile: React.FC = () => (
   </div>
 );
 
-/* ─── Confirmation Modal ─────────────────────────────────────────────── */
+/* ─── Base Confirm Modal ─────────────────────────────────────────────── */
 interface ConfirmModalProps {
   title: string;
   message: string;
@@ -292,6 +294,173 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   </div>
 );
 
+/* ─── Rollback Modal (2-phase) ───────────────────────────────────────── */
+interface RollbackModalProps {
+  stepLabel: string;
+  phase: 'confirm' | 'reason';
+  reason: string;
+  onReasonChange: (v: string) => void;
+  onNextPhase: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const RollbackModal: React.FC<RollbackModalProps> = ({
+  stepLabel, phase, reason, onReasonChange, onNextPhase, onConfirm, onCancel,
+}) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+    <div className="bg-white rounded-2xl shadow-2xl border border-red-100 w-full max-w-sm mx-4 overflow-hidden">
+
+      {/* Header stripe */}
+      <div className="bg-red-500 px-5 py-3.5 flex items-center gap-2.5">
+        <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+          <RotateCcw className="h-3.5 w-3.5 text-white" />
+        </div>
+        <div>
+          <p className="text-[10px] font-black text-red-100 uppercase tracking-widest">
+            {phase === 'confirm' ? 'Konfirmasi Rollback' : 'Catatan Alasan'}
+          </p>
+          <p className="text-xs font-black text-white leading-tight truncate max-w-[220px]">
+            {stepLabel}
+          </p>
+        </div>
+      </div>
+
+      <div className="px-6 pt-5 pb-2">
+        {phase === 'confirm' ? (
+          <>
+            <p className="text-xs font-bold text-slate-700 leading-relaxed mb-1">
+              Apakah Anda benar-benar akan menghapus proses ini?
+            </p>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Catatan dan lampiran pada tahap ini akan dihapus. Tahap sebelumnya akan dikembalikan ke status <span className="font-bold text-amber-600">OPEN</span>.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[11px] font-bold text-slate-500 mb-2">
+              Catatan Alasan Rollback <span className="font-normal text-slate-300">(opsional)</span>
+            </p>
+            <textarea
+              value={reason}
+              onChange={e => onReasonChange(e.target.value)}
+              rows={3}
+              placeholder="Tuliskan alasan penghapusan proses ini..."
+              className="w-full px-3 py-2.5 text-xs text-slate-700 border border-slate-200 rounded-xl resize-none focus:outline-none focus:border-red-300 transition-colors"
+              autoFocus
+            />
+          </>
+        )}
+      </div>
+
+      {/* Step indicator */}
+      <div className="flex items-center justify-center gap-1.5 py-2">
+        <div className={cn('h-1.5 w-4 rounded-full transition-colors', phase === 'confirm' ? 'bg-red-400' : 'bg-slate-200')} />
+        <div className={cn('h-1.5 w-4 rounded-full transition-colors', phase === 'reason' ? 'bg-red-400' : 'bg-slate-200')} />
+      </div>
+
+      <div className="flex items-center justify-end gap-2 px-6 pb-5">
+        <button
+          onClick={onCancel}
+          className="text-xs font-bold text-slate-500 hover:text-navy border border-slate-200 rounded-xl px-4 py-2 transition-colors hover:border-slate-300"
+        >
+          Batal
+        </button>
+        {phase === 'confirm' ? (
+          <button
+            onClick={onNextPhase}
+            className="text-xs font-black text-white bg-red-500 hover:bg-red-600 rounded-xl px-4 py-2 transition-colors"
+          >
+            Ya, Lanjutkan →
+          </button>
+        ) : (
+          <button
+            onClick={onConfirm}
+            className="flex items-center gap-1.5 text-xs font-black text-white bg-red-600 hover:bg-red-700 rounded-xl px-4 py-2 transition-colors"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Konfirmasi Rollback
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+/* ─── Purge Modal (Danger) ───────────────────────────────────────────── */
+interface PurgeModalProps {
+  consumerName: string;
+  loading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const PurgeModal: React.FC<PurgeModalProps> = ({
+  consumerName, loading, onConfirm, onCancel,
+}) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[3px]">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border-2 border-red-200">
+
+      {/* Danger header */}
+      <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-5 text-center">
+        <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
+          <Skull className="h-6 w-6 text-white" />
+        </div>
+        <p className="text-[10px] font-black text-red-200 uppercase tracking-widest mb-1">
+          ⚠ PERINGATAN PENTING ⚠
+        </p>
+        <p className="text-sm font-black text-white">Hapus Ajuan Permanen</p>
+      </div>
+
+      <div className="px-6 py-5 space-y-3">
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <p className="text-xs font-black text-red-700 leading-relaxed">
+            Menghapus ajuan awal akan menghapus <span className="underline">SEMUA data konsumen</span> dan seluruh entitas di dalamnya secara permanen.
+          </p>
+        </div>
+        <div className="space-y-1.5 text-[11px] text-slate-500">
+          <div className="flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-red-400 shrink-0" />
+            <span>Seluruh catatan & lampiran akan terhapus</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-red-400 shrink-0" />
+            <span>Riwayat proses tidak dapat dipulihkan</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-red-400 shrink-0" />
+            <span>Data konsumen <span className="font-bold text-red-600">{consumerName}</span> akan dihapus dari sistem</span>
+          </div>
+        </div>
+        <p className="text-[11px] font-bold text-slate-400 border-t border-slate-100 pt-3">
+          Tindakan ini tidak dapat dibatalkan. Lanjutkan?
+        </p>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 px-6 pb-5">
+        <button
+          onClick={onCancel}
+          disabled={loading}
+          className="text-xs font-bold text-slate-500 hover:text-navy border border-slate-200 rounded-xl px-4 py-2 transition-colors hover:border-slate-300 disabled:opacity-50"
+        >
+          Tidak, Batalkan
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={loading}
+          className="flex items-center gap-2 text-xs font-black text-white bg-red-600 hover:bg-red-700 rounded-xl px-5 py-2 transition-colors shadow-lg shadow-red-200 disabled:opacity-70"
+        >
+          {loading ? (
+            <><Loader2 className="h-3 w-3 animate-spin" /> Menghapus...</>
+          ) : (
+            <><Skull className="h-3 w-3" /> Ya, Hapus Permanen</>
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 /* ─── Attachment Box Component ───────────────────────────────────────── */
 interface AttachmentBoxProps {
   stepIdx: number;
@@ -306,21 +475,13 @@ interface AttachmentBoxProps {
 }
 
 const AttachmentBox: React.FC<AttachmentBoxProps> = ({
-  stepIdx,
-  status,
-  attachments,
-  linkInput,
-  linkError,
-  onFileSelect,
-  onLinkInputChange,
-  onLinkAdd,
-  onRemove,
+  stepIdx, status, attachments, linkInput, linkError,
+  onFileSelect, onLinkInputChange, onLinkAdd, onRemove,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isOpen = status === 'OPEN';
   const fileCount = attachments.filter(a => a.type === 'file').length;
   const canAddFile = isOpen && fileCount < MAX_FILES;
-
   const fileAttachments = attachments.filter((a): a is AttachFile => a.type === 'file');
   const linkAttachments = attachments.filter((a): a is AttachLink => a.type === 'link');
 
@@ -331,38 +492,28 @@ const AttachmentBox: React.FC<AttachmentBoxProps> = ({
       status === 'OPEN' && 'bg-white border-amber-200',
       status === 'LOCKED' && 'bg-slate-50/50 border-slate-100',
     )}>
-      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           Lampiran
-          {attachments.length > 0 && (
-            <span className="ml-1 text-slate-300">({attachments.length})</span>
-          )}
+          {attachments.length > 0 && <span className="ml-1 text-slate-300">({attachments.length})</span>}
         </p>
         <div className="flex items-center gap-1">
           {status === 'COMPLETED' && <Lock className="h-2.5 w-2.5 text-emerald-400" />}
           {isOpen && (
-            <span className={cn(
-              'text-[9px] font-bold',
-              fileCount >= MAX_FILES ? 'text-slate-300' : 'text-amber-400',
-            )}>
+            <span className={cn('text-[9px] font-bold', fileCount >= MAX_FILES ? 'text-slate-300' : 'text-amber-400')}>
               {fileCount}/{MAX_FILES}
             </span>
           )}
         </div>
       </div>
 
-      {/* File list */}
       {fileAttachments.length > 0 && (
         <div className="space-y-1.5 mb-2">
           {fileAttachments.map(att => (
             <div key={att.id} className="flex flex-col gap-0.5">
               <div className="flex items-center gap-1.5 group/att">
                 {getFileIcon(att.mimeType)}
-                <span className={cn(
-                  'text-[11px] font-medium truncate flex-1 leading-tight',
-                  isOpen ? 'text-slate-700' : 'text-slate-500',
-                )}>
+                <span className={cn('text-[11px] font-medium truncate flex-1 leading-tight', isOpen ? 'text-slate-700' : 'text-slate-500')}>
                   {att.name}
                 </span>
                 {isOpen && !att.uploading && (
@@ -375,18 +526,12 @@ const AttachmentBox: React.FC<AttachmentBoxProps> = ({
                   </button>
                 )}
               </div>
-              {/* Size or upload progress */}
               {att.uploading ? (
                 <div className="flex items-center gap-1.5 pl-4">
                   <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-amber-400 rounded-full transition-all duration-300"
-                      style={{ width: `${att.progress ?? 0}%` }}
-                    />
+                    <div className="h-full bg-amber-400 rounded-full transition-all duration-300" style={{ width: `${att.progress ?? 0}%` }} />
                   </div>
-                  <span className="text-[9px] font-bold text-amber-500 shrink-0">
-                    {att.progress ?? 0}%
-                  </span>
+                  <span className="text-[9px] font-bold text-amber-500 shrink-0">{att.progress ?? 0}%</span>
                 </div>
               ) : (
                 <p className="text-[9px] text-slate-300 pl-4">{formatBytes(att.size)}</p>
@@ -396,7 +541,6 @@ const AttachmentBox: React.FC<AttachmentBoxProps> = ({
         </div>
       )}
 
-      {/* Link list */}
       {linkAttachments.length > 0 && (
         <div className="space-y-1 mb-2">
           {linkAttachments.map(att => (
@@ -428,16 +572,12 @@ const AttachmentBox: React.FC<AttachmentBoxProps> = ({
         </div>
       )}
 
-      {/* Empty state */}
       {attachments.length === 0 && !isOpen && (
         <p className="text-[11px] text-zinc-300 italic">—</p>
       )}
 
-      {/* OPEN: Upload controls */}
       {isOpen && (
         <div className="mt-2 space-y-2 border-t border-amber-100 pt-2">
-
-          {/* Upload button */}
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => canAddFile && fileInputRef.current?.click()}
@@ -453,26 +593,17 @@ const AttachmentBox: React.FC<AttachmentBoxProps> = ({
               <Plus className="h-3 w-3" />
               Upload
             </button>
-            <span className="text-[9px] text-slate-300 leading-tight">
-              PDF/JPG/PNG · maks 2MB
-            </span>
+            <span className="text-[9px] text-slate-300 leading-tight">PDF/JPG/PNG · maks 2MB</span>
           </div>
-
-          {/* Hidden file input */}
           <input
             ref={fileInputRef}
             type="file"
             accept={ALLOWED_EXT.join(',')}
             className="hidden"
             onChange={e => {
-              if (e.target.files?.length) {
-                onFileSelect(stepIdx, e.target.files);
-                e.target.value = '';
-              }
+              if (e.target.files?.length) { onFileSelect(stepIdx, e.target.files); e.target.value = ''; }
             }}
           />
-
-          {/* Link input */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5">
               <div className="relative flex-1">
@@ -485,9 +616,7 @@ const AttachmentBox: React.FC<AttachmentBoxProps> = ({
                   placeholder="Paste link Drive di sini..."
                   className={cn(
                     'w-full pl-6 pr-2 py-1.5 text-[11px] rounded-lg border bg-white focus:outline-none transition-colors',
-                    linkError
-                      ? 'border-red-300 focus:border-red-400'
-                      : 'border-slate-200 focus:border-blue-300',
+                    linkError ? 'border-red-300 focus:border-red-400' : 'border-slate-200 focus:border-blue-300',
                   )}
                 />
               </div>
@@ -505,9 +634,7 @@ const AttachmentBox: React.FC<AttachmentBoxProps> = ({
                 <Plus className="h-3 w-3" />
               </button>
             </div>
-            {linkError && (
-              <p className="text-[10px] text-red-500 font-medium">{linkError}</p>
-            )}
+            {linkError && <p className="text-[10px] text-red-500 font-medium">{linkError}</p>}
           </div>
         </div>
       )}
@@ -525,8 +652,6 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [editingStep, setEditingStep] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState('');
-  const [deletedSteps, setDeletedSteps] = useState<Set<number>>(new Set());
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [stepStatuses, setStepStatuses] = useState<StepLockStatus[]>([]);
   const [confirmLock, setConfirmLock] = useState<number | null>(null);
   const [confirmUnlock, setConfirmUnlock] = useState<number | null>(null);
@@ -536,6 +661,14 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
   const [stepAttachments, setStepAttachments] = useState<Record<number, Attachment[]>>({});
   const [linkInputs, setLinkInputs] = useState<Record<number, string>>({});
   const [linkErrors, setLinkErrors] = useState<Record<number, string>>({});
+
+  // Rollback state
+  const [rollbackModal, setRollbackModal] = useState<{ stepIdx: number; phase: 'confirm' | 'reason' } | null>(null);
+  const [rollbackReason, setRollbackReason] = useState('');
+
+  // Purge state
+  const [purgeModal, setPurgeModal] = useState(false);
+  const [purging, setPurging] = useState(false);
 
   const isNotaris = profile?.role === 'NOTARIS';
 
@@ -550,7 +683,6 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
         const steps = CATALOG_STEPS[data.catalog_code] || DEFAULT_STEPS;
         const statuses = initStepStatuses(steps, data.progress_pct);
         setStepStatuses(statuses);
-
         const initialNotes: Record<number, string> = {};
         const initialAttachments: Record<number, Attachment[]> = {};
         steps.forEach((_, idx) => {
@@ -610,6 +742,52 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
     setConfirmUnlock(null);
   }, [consumer, persistStatuses]);
 
+  /* ─── Rollback Handler ──────────────────────────────────────────────── */
+  const handleRollbackConfirm = useCallback(() => {
+    if (!rollbackModal || !consumer) return;
+    const { stepIdx } = rollbackModal;
+
+    // First step → show purge modal instead
+    if (stepIdx === 0) {
+      setRollbackModal(null);
+      setPurgeModal(true);
+      return;
+    }
+
+    const steps = CATALOG_STEPS[consumer.catalog_code] || DEFAULT_STEPS;
+
+    // Clear this step's data
+    setNotes(prev => { const n = { ...prev }; delete n[stepIdx]; return n; });
+    setStepAttachments(prev => ({ ...prev, [stepIdx]: [] }));
+
+    // Update statuses: this step → LOCKED, previous → OPEN, all after → LOCKED
+    setStepStatuses(prev => {
+      const next = [...prev];
+      next[stepIdx] = 'LOCKED';
+      next[stepIdx - 1] = 'OPEN';
+      for (let i = stepIdx + 1; i < next.length; i++) next[i] = 'LOCKED';
+      persistStatuses(next, steps);
+      return next;
+    });
+
+    setRollbackModal(null);
+    setRollbackReason('');
+  }, [rollbackModal, consumer, persistStatuses]);
+
+  /* ─── Purge Handler ─────────────────────────────────────────────────── */
+  const handlePurge = useCallback(async () => {
+    if (!id) return;
+    setPurging(true);
+    try {
+      await NotaryHttpClient.delete(`/api/consumers/${id}`);
+    } catch (_) {
+    } finally {
+      setPurging(false);
+      setPurgeModal(false);
+      navigate('/consumers');
+    }
+  }, [id, navigate]);
+
   const handleStartEdit = useCallback((stepIdx: number, currentNote: string) => {
     setEditingStep(stepIdx);
     setEditDraft(currentNote);
@@ -626,25 +804,14 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
     setEditDraft('');
   }, []);
 
-  const handleDeleteStep = useCallback((stepIdx: number) => {
-    setDeletedSteps(prev => new Set([...prev, stepIdx]));
-    setConfirmDelete(null);
-  }, []);
-
   /* ─── Attachment Handlers ─────────────────────────────────────────── */
   const handleFileSelect = useCallback((stepIdx: number, files: FileList) => {
     const file = files[0];
     if (!file) return;
-
     const currentFiles = (stepAttachments[stepIdx] ?? []).filter(a => a.type === 'file');
     if (currentFiles.length >= MAX_FILES) return;
-
-    if (!ALLOWED_MIME.includes(file.type)) {
-      return;
-    }
-    if (file.size > MAX_SIZE_BYTES) {
-      return;
-    }
+    if (!ALLOWED_MIME.includes(file.type)) return;
+    if (file.size > MAX_SIZE_BYTES) return;
 
     const newAttachment: AttachFile = {
       id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -661,7 +828,6 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
       [stepIdx]: [...(prev[stepIdx] ?? []), newAttachment],
     }));
 
-    // Simulate upload progress
     let prog = 0;
     const interval = setInterval(() => {
       prog += Math.floor(Math.random() * 25) + 15;
@@ -671,9 +837,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
         setStepAttachments(prev => ({
           ...prev,
           [stepIdx]: (prev[stepIdx] ?? []).map(a =>
-            a.id === newAttachment.id
-              ? { ...a, uploading: false, progress: 100 }
-              : a,
+            a.id === newAttachment.id ? { ...a, uploading: false, progress: 100 } : a,
           ),
         }));
       } else {
@@ -689,9 +853,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
 
   const handleLinkInputChange = useCallback((stepIdx: number, val: string) => {
     setLinkInputs(prev => ({ ...prev, [stepIdx]: val }));
-    if (linkErrors[stepIdx]) {
-      setLinkErrors(prev => ({ ...prev, [stepIdx]: '' }));
-    }
+    if (linkErrors[stepIdx]) setLinkErrors(prev => ({ ...prev, [stepIdx]: '' }));
   }, [linkErrors]);
 
   const handleLinkAdd = useCallback((stepIdx: number) => {
@@ -703,13 +865,9 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
     }
     const newLink: AttachLink = {
       id: `link-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      url,
-      type: 'link',
+      url, type: 'link',
     };
-    setStepAttachments(prev => ({
-      ...prev,
-      [stepIdx]: [...(prev[stepIdx] ?? []), newLink],
-    }));
+    setStepAttachments(prev => ({ ...prev, [stepIdx]: [...(prev[stepIdx] ?? []), newLink] }));
     setLinkInputs(prev => ({ ...prev, [stepIdx]: '' }));
     setLinkErrors(prev => ({ ...prev, [stepIdx]: '' }));
   }, [linkInputs]);
@@ -734,10 +892,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <AlertTriangle className="h-10 w-10 text-red-400" />
         <p className="text-sm font-bold text-navy">Konsumen tidak ditemukan.</p>
-        <button
-          onClick={() => navigate('/consumers')}
-          className="text-xs font-bold text-gold hover:underline"
-        >
+        <button onClick={() => navigate('/consumers')} className="text-xs font-bold text-gold hover:underline">
           ← Kembali ke Direktori
         </button>
       </div>
@@ -754,7 +909,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
   return (
     <div className="max-w-5xl mx-auto pb-12 space-y-6">
 
-      {/* Confirmation Modals */}
+      {/* ── Modals ── */}
       {confirmLock !== null && (
         <ConfirmModal
           title="Kunci Tahap Ini?"
@@ -777,6 +932,27 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
         />
       )}
 
+      {rollbackModal !== null && (
+        <RollbackModal
+          stepLabel={steps[rollbackModal.stepIdx]}
+          phase={rollbackModal.phase}
+          reason={rollbackReason}
+          onReasonChange={setRollbackReason}
+          onNextPhase={() => setRollbackModal(prev => prev ? { ...prev, phase: 'reason' } : null)}
+          onConfirm={handleRollbackConfirm}
+          onCancel={() => { setRollbackModal(null); setRollbackReason(''); }}
+        />
+      )}
+
+      {purgeModal && (
+        <PurgeModal
+          consumerName={consumer.client_name}
+          loading={purging}
+          onConfirm={handlePurge}
+          onCancel={() => setPurgeModal(false)}
+        />
+      )}
+
       {/* Top Bar */}
       <div className="flex items-center justify-between">
         <button
@@ -786,16 +962,12 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
           <ArrowLeft className="h-3.5 w-3.5" />
           Kembali ke Direktori
         </button>
-
         <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {saving && <Loader2 className="h-3 w-3 animate-spin text-amber-500" />}
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
           <span>Petugas: <span className="text-navy">{profile?.username || 'System'}</span></span>
           <span className="text-gold">•</span>
-          <span className={cn(
-            'px-2 py-0.5 rounded-md',
-            isNotaris ? 'bg-gold/10 text-gold' : 'bg-zinc-100 text-slate-500',
-          )}>
+          <span className={cn('px-2 py-0.5 rounded-md', isNotaris ? 'bg-gold/10 text-gold' : 'bg-zinc-100 text-slate-500')}>
             {profile?.role || 'GUEST'}
           </span>
         </div>
@@ -809,9 +981,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
           </div>
           <div>
             <h2 className="text-sm font-black text-navy uppercase tracking-tight">Identitas Konsumen</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              Kode Ajuan: #{shortId}
-            </p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kode Ajuan: #{shortId}</p>
           </div>
           {consumer.is_vetoed && (
             <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-black text-red-600 bg-red-50 border border-red-100 rounded-full px-3 py-1 uppercase tracking-wide">
@@ -828,11 +998,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
           <div className="pl-6">
             <FieldRow icon={<Tag className="h-3.5 w-3.5" />} label="Jenis Katalog" value={consumer.catalog_code} />
             <FieldRow icon={<Calendar className="h-3.5 w-3.5" />} label="Tanggal Masuk" value={dateStr} />
-            <FieldRow
-              icon={<TrendingUp className="h-3.5 w-3.5" />}
-              label="Progres Saat Ini"
-              value={`${consumer.progress_pct}% — ${consumer.current_milestone}`}
-            />
+            <FieldRow icon={<TrendingUp className="h-3.5 w-3.5" />} label="Progres Saat Ini" value={`${consumer.progress_pct}% — ${consumer.current_milestone}`} />
           </div>
         </div>
       </div>
@@ -849,8 +1015,6 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
       {/* Vertical Steps */}
       <div className="space-y-0">
         {steps.map((stepLabel, idx) => {
-          if (deletedSteps.has(idx)) return null;
-
           const status: StepLockStatus = stepStatuses[idx] ?? 'LOCKED';
           const boxClass = getStatusBoxClass(status);
           const textClass = getStatusTextClass(status);
@@ -858,9 +1022,9 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
           const noteText = notes[idx] ?? '';
           const isEditing = editingStep === idx;
           const isLocked = status === 'LOCKED';
+          const isFirst = idx === 0;
 
-          const isLast = idx === steps.length - 1
-            || steps.slice(idx + 1).every((_, i) => deletedSteps.has(idx + 1 + i));
+          const isLast = idx === steps.length - 1;
 
           return (
             <div key={idx}>
@@ -869,10 +1033,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
 
                 {/* LEFT: Status Box */}
                 <div className="shrink-0" style={{ width: 172 }}>
-                  <div className={cn(
-                    'rounded-xl border bg-gradient-to-br px-3 py-2.5 relative',
-                    boxClass,
-                  )}>
+                  <div className={cn('rounded-xl border bg-gradient-to-br px-3 py-2.5 relative', boxClass)}>
                     <div className="flex items-center justify-between gap-1 mb-1">
                       <span className={cn('text-[9px] font-black uppercase tracking-widest opacity-70', textClass)}>
                         Step {idx + 1}
@@ -892,19 +1053,13 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                             <Check className="h-2.5 w-2.5 text-white" />
                           </div>
                         )}
-                        {status === 'OPEN' && (
-                          <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                        )}
-                        {status === 'LOCKED' && (
-                          <Lock className="h-3 w-3 text-slate-400" />
-                        )}
+                        {status === 'OPEN' && <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />}
+                        {status === 'LOCKED' && <Lock className="h-3 w-3 text-slate-400" />}
                       </div>
                     </div>
                     <p className={cn('text-xs font-bold leading-tight', textClass)}>{stepLabel}</p>
                     {timestamp && (
-                      <p className={cn('text-[10px] mt-1.5 font-medium opacity-60', textClass)}>
-                        {timestamp}
-                      </p>
+                      <p className={cn('text-[10px] mt-1.5 font-medium opacity-60', textClass)}>{timestamp}</p>
                     )}
                     {status === 'LOCKED' && (
                       <p className="text-[10px] mt-1 font-medium text-slate-400 italic">Belum dimulai</p>
@@ -930,16 +1085,10 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                         autoFocus
                       />
                       <div className="flex items-center justify-end gap-2 px-3 py-2 border-t border-amber-100 bg-amber-50/50">
-                        <button
-                          onClick={handleCancelEdit}
-                          className="flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-navy transition-colors px-2 py-1 rounded"
-                        >
+                        <button onClick={handleCancelEdit} className="flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-navy transition-colors px-2 py-1 rounded">
                           <XIcon className="h-3 w-3" /> Batal
                         </button>
-                        <button
-                          onClick={() => handleSaveEdit(idx)}
-                          className="flex items-center gap-1 text-[10px] font-black text-white bg-amber-500 rounded-lg px-3 py-1.5 hover:bg-amber-600 transition-colors"
-                        >
+                        <button onClick={() => handleSaveEdit(idx)} className="flex items-center gap-1 text-[10px] font-black text-white bg-amber-500 rounded-lg px-3 py-1.5 hover:bg-amber-600 transition-colors">
                           <Check className="h-3 w-3" /> Simpan
                         </button>
                       </div>
@@ -956,10 +1105,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                       title={status === 'OPEN' ? 'Klik untuk edit catatan' : undefined}
                     >
                       {noteText ? (
-                        <p className={cn(
-                          'text-xs leading-relaxed',
-                          status === 'COMPLETED' ? 'text-slate-500' : 'text-slate-700',
-                        )}>
+                        <p className={cn('text-xs leading-relaxed', status === 'COMPLETED' ? 'text-slate-500' : 'text-slate-700')}>
                           {noteText}
                         </p>
                       ) : status !== 'LOCKED' ? (
@@ -971,14 +1117,12 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                       )}
                       {status === 'OPEN' && (
                         <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                          <Pencil className="h-2.5 w-2.5" />
-                          <span>Edit Catatan</span>
+                          <Pencil className="h-2.5 w-2.5" /><span>Edit Catatan</span>
                         </div>
                       )}
                       {status === 'COMPLETED' && (
                         <div className="flex items-center gap-1 mt-2 text-[10px] text-emerald-500">
-                          <Lock className="h-2.5 w-2.5" />
-                          <span className="font-bold">Catatan Terkunci</span>
+                          <Lock className="h-2.5 w-2.5" /><span className="font-bold">Catatan Terkunci</span>
                         </div>
                       )}
                     </div>
@@ -1002,6 +1146,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
 
                 {/* FAR RIGHT: Actions */}
                 <div className="shrink-0 flex flex-col items-start gap-2 pt-1" style={{ width: 124 }}>
+                  {/* Save & Lock — OPEN step */}
                   {status === 'OPEN' && (
                     <button
                       onClick={() => setConfirmLock(idx)}
@@ -1011,34 +1156,32 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                       Simpan & Kunci
                     </button>
                   )}
-                  {isNotaris && (
-                    confirmDelete === idx ? (
-                      <div className="flex flex-col gap-1 w-full">
-                        <span className="text-[10px] font-bold text-red-600">Konfirmasi?</span>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handleDeleteStep(idx)}
-                            className="text-[10px] font-black text-white bg-red-500 rounded px-2 py-1 hover:bg-red-600 transition-colors"
-                          >
-                            Hapus
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete(null)}
-                            className="text-[10px] font-bold text-slate-500 hover:text-navy px-1 py-1"
-                          >
-                            Batal
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDelete(idx)}
-                        className="flex items-center gap-1 text-[11px] font-medium text-red-500 hover:text-red-700 opacity-0 group-hover/row:opacity-100 transition-all"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Hapus Proses
-                      </button>
-                    )
+
+                  {/* Hapus Proses Ini — NOTARIS only, OPEN or COMPLETED steps */}
+                  {isNotaris && (status === 'OPEN' || status === 'COMPLETED') && (
+                    <button
+                      onClick={() => {
+                        if (isFirst) {
+                          setPurgeModal(true);
+                        } else {
+                          setRollbackModal({ stepIdx: idx, phase: 'confirm' });
+                          setRollbackReason('');
+                        }
+                      }}
+                      className={cn(
+                        'flex items-center gap-1 text-[11px] font-medium transition-all',
+                        isFirst
+                          ? 'text-red-600 hover:text-red-800 opacity-0 group-hover/row:opacity-100'
+                          : 'text-red-500 hover:text-red-700 opacity-0 group-hover/row:opacity-100',
+                      )}
+                      title={isFirst ? 'Hapus ajuan ini secara permanen' : 'Rollback ke tahap sebelumnya'}
+                    >
+                      {isFirst ? (
+                        <><Skull className="h-3 w-3" /> Hapus Ajuan</>
+                      ) : (
+                        <><RotateCcw className="h-3 w-3" /> Hapus Proses</>
+                      )}
+                    </button>
                   )}
                 </div>
               </div>
@@ -1071,12 +1214,12 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
         })}
       </div>
 
-      {/* Footer note */}
+      {/* Footer */}
       <div className="flex items-center gap-2 pt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-t border-slate-100">
         {isNotaris ? (
           <>
             <LockOpen className="h-3 w-3 text-red-400" />
-            <span>Mode Notaris — Dapat mengunci & membuka kembali tahapan. Ikon merah = Override Unlock.</span>
+            <span>Mode Notaris — Kunci, buka, rollback, & hapus ajuan tersedia.</span>
           </>
         ) : (
           <>
