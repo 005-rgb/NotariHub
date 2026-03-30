@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { NotaryHttpClient } from '../lib/NotaryHttpClient';
 import { TenantSettings } from '../types';
 
@@ -18,7 +18,8 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { tid: tenantId } = NotaryHttpClient.getContext();
+  const tenantIdRef = useRef(NotaryHttpClient.getContext().tid);
+  const tenantId = tenantIdRef.current;
 
   const fetchSettings = useCallback(async (tid: string) => {
     setIsLoading(true);
