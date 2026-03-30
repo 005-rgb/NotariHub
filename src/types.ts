@@ -47,6 +47,7 @@ export interface FolderListItem {
   id: string;
   client_name: string;
   nik?: string;
+  phone?: string;
   created_at: string;
   catalog_code: string;
   current_milestone: string;

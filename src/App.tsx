@@ -6,6 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { NewSubmissionForm } from './components/NewSubmissionForm';
 import { SuperAdminSettings } from './components/SuperAdminSettings';
 import { AiOcrExtractor } from './components/AiOcrExtractor';
+import { ConsumerDirectory } from './components/ConsumerDirectory';
 import { IdentityGuard } from './components/IdentityGuard';
 import { Loader2, UserCircle } from 'lucide-react';
 import { UserProfile } from './types';
@@ -145,6 +146,16 @@ export default function App() {
                       <h2 className="text-2xl font-black text-navy uppercase tracking-tight">Tenant Settings</h2>
                       <p className="mt-2 text-sm font-medium text-slate">Configure your office profile and service packages.</p>
                     </div>
+                  </LayoutWrapper>
+                </IdentityGuard>
+              }
+            />
+            <Route
+              path="/consumers"
+              element={
+                <IdentityGuard>
+                  <LayoutWrapper profile={profile}>
+                    <ConsumerDirectory profile={profile} />
                   </LayoutWrapper>
                 </IdentityGuard>
               }

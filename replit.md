@@ -28,6 +28,7 @@ A multi-tenant SaaS platform for Indonesian notary offices. Provides legal docum
 - **Subscription plans**: BASIC, PREMIUM, ENTERPRISE with feature gating
 - **Role-based access**: NOTARIS, STAF_UTAMA, SUPER_ADMIN roles
 - **Legal workflow**: Tracks folders through milestones (Validasi Pajak, Minuta, etc.)
+- **Consumer Directory** (`/consumers`): Full-featured virtualized table with incremental search, katalog/year filters, action buttons (WhatsApp, Print, Edit), and ConsumerDetailDrawer integration. Uses `react-window` + `react-virtualized-auto-sizer` for 60fps virtual scrolling at scale. RBAC: Edit button only visible for NOTARIS role.
 - **AI OCR**: Document text extraction (PREMIUM/ENTERPRISE only)
 - **Client portal**: Auto-generated credentials for consumer document tracking
 

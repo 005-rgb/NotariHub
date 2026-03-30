@@ -271,12 +271,16 @@ async function startServer() {
   });
 
   // Mock Folder List Data (150 records)
+  const PHONE_PREFIXES = ['0812', '0813', '0821', '0822', '0851', '0852', '0857', '0858', '0878', '0881'];
   const folder_list_data = Array.from({ length: 150 }, (_, i) => {
     const targetDate = new Date(Date.now() + (i % 5 === 0 ? -86400000 : 86400000 * (i % 10)));
+    const phonePrefix = PHONE_PREFIXES[i % PHONE_PREFIXES.length];
+    const phoneSuffix = String(10000000 + (i * 137931) % 90000000).padStart(8, '0');
     return {
       id: `uuid-${i + 1}`,
       client_name: i % 2 === 0 ? `Budi Santoso ${i + 1}` : `Siti Aminah ${i + 1}`,
-      nik: `331201${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+      nik: `331201${Math.floor(1000000000 + (i * 12345) % 9000000000)}`,
+      phone: `${phonePrefix}${phoneSuffix}`,
       created_at: new Date(Date.now() - i * 86400000).toISOString(),
       catalog_code: ['AJB', 'APHT', 'SKMHT', 'FIDUSIA', 'WASIAT'][i % 5],
       current_milestone: ['Validasi Pajak', 'Plotting', 'Tanda Tangan', 'Minuta', 'Selesai'][i % 5],
@@ -557,6 +561,13 @@ async function startServer() {
       total_records: folder_list_data.length,
       current_page: page,
       data: data
+    });
+  });
+
+  app.get('/api/consumers', (req, res) => {
+    res.json({
+      total_records: folder_list_data.length,
+      data: folder_list_data
     });
   });
 
