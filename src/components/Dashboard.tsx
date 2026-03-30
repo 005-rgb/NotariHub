@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { BulletinBoard } from './BulletinBoard';
+import { DashboardCalendar } from './DashboardCalendar';
 
 const CATALOG_COLORS: Record<string, string> = {
   LAN: 'bg-blue-100 text-blue-700',
@@ -310,9 +311,12 @@ export const Dashboard: React.FC<{ role: string; authorName?: string }> = ({
           <MonthlyCard />
         </div>
 
-        {/* RIGHT COLUMN — Bulletin Board */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-          <BulletinBoard role={role} authorName={authorName} />
+        {/* RIGHT COLUMN — Bulletin Board + Calendar */}
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+            <BulletinBoard role={role} authorName={authorName} />
+          </div>
+          <DashboardCalendar />
         </div>
       </div>
     </div>
