@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Megaphone,
   Calendar,
@@ -6,13 +6,15 @@ import {
   ChevronRight,
   Plus,
   FileText,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { BulletinDetailModal, BulletinAnnouncement } from './BulletinDetailModal';
+import { AnnouncementForm, NewAnnouncementPayload } from './AnnouncementForm';
 
 const ITEMS_PER_PAGE = 4;
 
-const MOCK_ANNOUNCEMENTS: BulletinAnnouncement[] = [
+const INITIAL_ANNOUNCEMENTS: BulletinAnnouncement[] = [
   {
     id: 'bul-1',
     title: 'Perubahan Tarif BPHTB Efektif Mei 2026',
@@ -81,19 +83,45 @@ const MOCK_ANNOUNCEMENTS: BulletinAnnouncement[] = [
 
 interface BulletinBoardProps {
   role: string;
+  authorName?: string;
 }
 
-export const BulletinBoard: React.FC<BulletinBoardProps> = ({ role }) => {
+export const BulletinBoard: React.FC<BulletinBoardProps> = ({
+  role,
+  authorName = 'Notaris',
+}) => {
+  const [announcements, setAnnouncements] = useState<BulletinAnnouncement[]>(INITIAL_ANNOUNCEMENTS);
   const [page, setPage] = useState(0);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<BulletinAnnouncement | null>(null);
-  const isNotaris = role === 'NOTARIS';
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [successTitle, setSuccessTitle] = useState<string | null>(null);
 
-  const totalPages = Math.ceil(MOCK_ANNOUNCEMENTS.length / ITEMS_PER_PAGE);
+  const isNotaris = role === 'NOTARIS';
+  const totalPages = Math.ceil(announcements.length / ITEMS_PER_PAGE);
 
   const currentItems = useMemo(
-    () => MOCK_ANNOUNCEMENTS.slice(page * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE + ITEMS_PER_PAGE),
-    [page]
+    () => announcements.slice(page * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE + ITEMS_PER_PAGE),
+    [announcements, page]
   );
+
+  useEffect(() => {
+    if (!successTitle) return;
+    const t = setTimeout(() => setSuccessTitle(null), 3500);
+    return () => clearTimeout(t);
+  }, [successTitle]);
+
+  const handlePublish = (payload: NewAnnouncementPayload) => {
+    const newEntry: BulletinAnnouncement = {
+      id: `bul-${Date.now()}`,
+      title: payload.title,
+      content: payload.content,
+      author: authorName,
+      posted_at: payload.posted_at,
+    };
+    setAnnouncements((prev) => [newEntry, ...prev]);
+    setPage(0);
+    setSuccessTitle(newEntry.title);
+  };
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -104,6 +132,7 @@ export const BulletinBoard: React.FC<BulletinBoardProps> = ({ role }) => {
   return (
     <>
       <div className="space-y-4">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="h-7 w-7 rounded-lg bg-gold/10 flex items-center justify-center">
@@ -118,13 +147,32 @@ export const BulletinBoard: React.FC<BulletinBoardProps> = ({ role }) => {
           </div>
 
           {isNotaris && (
-            <button className="flex items-center gap-1.5 bg-navy hover:bg-navy/80 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl shadow-sm transition-all hover:scale-[1.02] active:scale-95">
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="flex items-center gap-1.5 bg-navy hover:bg-navy/80 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl shadow-sm transition-all hover:scale-[1.02] active:scale-95"
+            >
               <Plus className="h-3.5 w-3.5" />
               Buat Pengumuman
             </button>
           )}
         </div>
 
+        {/* Success Toast */}
+        {successTitle && (
+          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+            <div>
+              <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                Pengumuman Berhasil Dipublikasikan
+              </p>
+              <p className="text-xs font-medium text-emerald-600 mt-0.5 truncate max-w-sm">
+                "{successTitle}"
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Card Grid 2x2 */}
         <div className="grid grid-cols-2 gap-4">
           {currentItems.map((item) => (
             <div
@@ -163,9 +211,10 @@ export const BulletinBoard: React.FC<BulletinBoardProps> = ({ role }) => {
           ))}
         </div>
 
+        {/* Pagination */}
         <div className="flex items-center justify-between pt-1">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Halaman {page + 1} dari {totalPages} &mdash; {MOCK_ANNOUNCEMENTS.length} Pengumuman
+            Halaman {page + 1} dari {totalPages} &mdash; {announcements.length} Pengumuman
           </span>
           <div className="flex items-center gap-1.5">
             <button
@@ -184,9 +233,7 @@ export const BulletinBoard: React.FC<BulletinBoardProps> = ({ role }) => {
                   onClick={() => setPage(i)}
                   className={cn(
                     'h-6 w-6 rounded-md text-[9px] font-black transition-all',
-                    i === page
-                      ? 'bg-navy text-white'
-                      : 'text-slate-400 hover:bg-zinc-100'
+                    i === page ? 'bg-navy text-white' : 'text-slate-400 hover:bg-zinc-100'
                   )}
                 >
                   {i + 1}
@@ -206,10 +253,21 @@ export const BulletinBoard: React.FC<BulletinBoardProps> = ({ role }) => {
         </div>
       </div>
 
+      {/* Detail Modal */}
       <BulletinDetailModal
         announcement={selectedAnnouncement}
         onClose={() => setSelectedAnnouncement(null)}
       />
+
+      {/* Create Form Modal — RBAC guard: only renders for NOTARIS */}
+      {isNotaris && (
+        <AnnouncementForm
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onPublish={handlePublish}
+          authorName={authorName}
+        />
+      )}
     </>
   );
 };

@@ -98,7 +98,7 @@ export default function App() {
               element={
                 <IdentityGuard>
                   <LayoutWrapper profile={profile}>
-                    <Dashboard role={profile?.role || 'GUEST'} />
+                    <Dashboard role={profile?.role || 'GUEST'} authorName={profile?.username || 'Notaris'} />
                   </LayoutWrapper>
                 </IdentityGuard>
               }

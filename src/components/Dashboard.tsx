@@ -18,7 +18,7 @@ import { cn } from '../lib/utils';
 import { useUi } from '../context/UiContext';
 import { BulletinBoard } from './BulletinBoard';
 
-export const Dashboard: React.FC<{ role: string }> = ({ role }) => {
+export const Dashboard: React.FC<{ role: string; authorName?: string }> = ({ role, authorName = 'Notaris' }) => {
   const [data, setData] = useState<PaginatedResponse<FolderListItem> | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -115,7 +115,7 @@ export const Dashboard: React.FC<{ role: string }> = ({ role }) => {
 
       {/* Bulletin Board */}
       <div className="bg-white rounded-[32px] border border-zinc-100 shadow-sm p-8">
-        <BulletinBoard role={role} />
+        <BulletinBoard role={role} authorName={authorName} />
       </div>
 
       {/* Main Table Grid */}
