@@ -1,0 +1,38 @@
+ROLE: Senior UI/UX Designer & Lead React Developer.
+TASK: Bangun Halaman Profil '/direktori/[id]' dengan Alur Murni Vertikal sesuai Gambar Lampiran 3.png.
+
+STRICT UI & LOGIC REQUIREMENTS (12px Standard):
+
+1. ROUTING & DATA DYNAMICS:
+   - Hapus fungsi Drawer Detail. Klik Nama di Direktori -> navigate ke '/direktori/[id]'.
+   - Render tahapan secara dinamis sesuai data 'katalog_id' di database (Tampilkan SEMUA step secara vertikal).
+
+2. HEADER SECTION (Identitas):
+   - Gunakan Card putih bersih dengan border Slate-200.
+   - Tampilkan Judul 'Identitas Konsumen' (14px Bold Navy).
+   - List data: Kode Ajuan, Nama, dan field lainnya secara rapi.
+
+3. THE VERTICAL PROGRESS ENGINE (MATCH IMAGE PRECISELY):
+   - Susun komponen secara vertikal. Setiap tahapan (Step) terdiri dari 3 kolom horizontal:
+     A. SISI KIRI (Status Box): Box rounded (Lebar 160px). Warna latar menggunakan gradasi profesional:
+        - Tahap Awal: Soft Orange/Slate.
+        - Tahap Tengah: Blue-Gray/Sand.
+        - Tahap Akhir: Emerald/Light-Gray.
+        - Isi: Nama Tahap (12px Bold Navy) & (Log Waktu 10px).
+     B. SISI TENGAH (Catatan Box): Box putih, border Slate-200, padding 8px. Berisi teks catatan (12px).
+     C. SISI KANAN (Lampiran Box): Box putih berisi link link 'Lampiran Dokumen' (1, 2, 3...) dengan ikon Lucide Paperclip.
+
+4. CONNECTORS & ACTIONS:
+   - Hubungkan setiap BOX STATUS di sisi kiri dengan 'Arrow Down' besar berwarna Gray-400.
+   - Tambahkan Link 'Hapus Proses Ini' (Text Red-500, 11px) di sebelah kanan setiap baris (Hanya untuk Role Notaris).
+
+5. INTERACTIVE (RBAC):
+   - Jika User === NOTARIS: Box Catatan dapat diklik untuk Edit Mode.
+   - Jika User === STAF: Read-only view.
+   - Beri tombol 'Kembali ke Direktori' di posisi Top-Left (Style: Outline Gold, 12px).
+
+6. PRECISION FINISHING:
+   - Font: text-xs (12px) konsisten.
+   - Spacing: Padat, presisi, dan super elegan (UI Friendly).
+
+OUTPUT: File ConsumerProfilePage.tsx dan pembaruan sistem routing App.tsx.

@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import { AutoSizer } from 'react-virtualized-auto-sizer';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   MessageCircle,
   Printer,
-  Pencil,
   ChevronDown,
   Users2,
   AlertTriangle,
   CheckCircle2,
   Clock,
   X,
+  ExternalLink,
 } from 'lucide-react';
 import { NotaryHttpClient } from '../lib/NotaryHttpClient';
 import { FolderListItem, UserProfile } from '../types';
-import { useUi } from '../context/UiContext';
 import { cn } from '../lib/utils';
 
 interface ConsumerDirectoryProps {
@@ -37,7 +37,7 @@ const SkeletonRow: React.FC<{ index: number }> = ({ index }) => (
   <div
     className="grid items-center border-b border-zinc-100 px-6"
     style={{
-      gridTemplateColumns: '80px 1fr 140px 110px 160px 120px 100px',
+      gridTemplateColumns: '80px 1fr 140px 110px 160px 120px 108px',
       height: ROW_HEIGHT,
       opacity: 1 - index * 0.12,
     }}
@@ -56,14 +56,13 @@ const SkeletonRow: React.FC<{ index: number }> = ({ index }) => (
 interface RowData {
   items: FolderListItem[];
   isNotaris: boolean;
-  onOpenDrawer: (item: FolderListItem) => void;
+  onNavigate: (item: FolderListItem) => void;
   onWhatsApp: (item: FolderListItem) => void;
   onPrint: (item: FolderListItem) => void;
-  onEdit: (item: FolderListItem) => void;
 }
 
 const TableRow: React.FC<ListChildComponentProps<RowData>> = ({ index, style, data }) => {
-  const { items, isNotaris, onOpenDrawer, onWhatsApp, onPrint, onEdit } = data;
+  const { items, isNotaris, onNavigate, onWhatsApp, onPrint } = data;
   const item = items[index];
   if (!item) return null;
 
@@ -80,7 +79,7 @@ const TableRow: React.FC<ListChildComponentProps<RowData>> = ({ index, style, da
       className="group grid items-center border-b border-zinc-100 px-6 hover:bg-slate-50 transition-colors cursor-default"
       style={{
         ...style,
-        gridTemplateColumns: '80px 1fr 140px 110px 160px 120px 100px',
+        gridTemplateColumns: '80px 1fr 140px 110px 160px 120px 108px',
       }}
     >
       {/* ID */}
@@ -89,10 +88,11 @@ const TableRow: React.FC<ListChildComponentProps<RowData>> = ({ index, style, da
       {/* Nama Konsumen */}
       <div className="flex flex-col min-w-0 pr-4">
         <button
-          onClick={() => onOpenDrawer(item)}
-          className="text-xs font-bold text-navy hover:text-gold transition-colors text-left truncate uppercase tracking-tight"
+          onClick={() => onNavigate(item)}
+          className="text-xs font-bold text-navy hover:text-gold transition-colors text-left truncate uppercase tracking-tight flex items-center gap-1 group/name"
         >
-          {item.client_name}
+          <span className="truncate">{item.client_name}</span>
+          <ExternalLink className="h-2.5 w-2.5 shrink-0 opacity-0 group-hover/name:opacity-60 transition-opacity" />
         </button>
         <span className="text-[10px] text-slate-400 font-medium truncate">{item.nik || '—'}</span>
       </div>
@@ -123,6 +123,13 @@ const TableRow: React.FC<ListChildComponentProps<RowData>> = ({ index, style, da
       {/* Aksi */}
       <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
         <button
+          onClick={() => onNavigate(item)}
+          title="Lihat Profil"
+          className="p-1.5 rounded-lg hover:bg-gold/10 text-gold transition-colors"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </button>
+        <button
           onClick={() => onWhatsApp(item)}
           title="Kirim WhatsApp"
           className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
@@ -136,15 +143,6 @@ const TableRow: React.FC<ListChildComponentProps<RowData>> = ({ index, style, da
         >
           <Printer className="h-3.5 w-3.5" />
         </button>
-        {isNotaris && (
-          <button
-            onClick={() => onEdit(item)}
-            title="Edit (Notaris)"
-            className="p-1.5 rounded-lg hover:bg-gold/10 text-gold transition-colors"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        )}
       </div>
     </div>
   );
@@ -156,7 +154,7 @@ export const ConsumerDirectory: React.FC<ConsumerDirectoryProps> = ({ profile })
   const [search, setSearch] = useState('');
   const [catalogFilter, setCatalogFilter] = useState('Semua Katalog');
   const [yearFilter, setYearFilter] = useState('Semua Tahun');
-  const { setIsConsumerDrawerOpen, setSelectedConsumer } = useUi();
+  const navigate = useNavigate();
   const searchRef = useRef<HTMLInputElement>(null);
 
   const isNotaris = profile?.role === 'NOTARIS';
@@ -207,10 +205,9 @@ export const ConsumerDirectory: React.FC<ConsumerDirectoryProps> = ({ profile })
     return result;
   }, [allData, search, catalogFilter, yearFilter]);
 
-  const handleOpenDrawer = useCallback((item: FolderListItem) => {
-    setSelectedConsumer(item);
-    setIsConsumerDrawerOpen(true);
-  }, [setSelectedConsumer, setIsConsumerDrawerOpen]);
+  const handleNavigate = useCallback((item: FolderListItem) => {
+    navigate(`/direktori/${item.id}`);
+  }, [navigate]);
 
   const handleWhatsApp = useCallback((item: FolderListItem) => {
     const phone = item.phone?.replace(/^0/, '62') || '';
@@ -222,19 +219,13 @@ export const ConsumerDirectory: React.FC<ConsumerDirectoryProps> = ({ profile })
     window.print();
   }, []);
 
-  const handleEdit = useCallback((item: FolderListItem) => {
-    setSelectedConsumer(item);
-    setIsConsumerDrawerOpen(true);
-  }, [setSelectedConsumer, setIsConsumerDrawerOpen]);
-
   const rowData: RowData = useMemo(() => ({
     items: filteredData,
     isNotaris,
-    onOpenDrawer: handleOpenDrawer,
+    onNavigate: handleNavigate,
     onWhatsApp: handleWhatsApp,
     onPrint: handlePrint,
-    onEdit: handleEdit,
-  }), [filteredData, isNotaris, handleOpenDrawer, handleWhatsApp, handlePrint, handleEdit]);
+  }), [filteredData, isNotaris, handleNavigate, handleWhatsApp, handlePrint]);
 
   const clearSearch = () => {
     setSearch('');
@@ -346,7 +337,7 @@ export const ConsumerDirectory: React.FC<ConsumerDirectoryProps> = ({ profile })
         <div
           className="grid items-center border-b border-zinc-100 bg-zinc-50/80 px-6 shrink-0"
           style={{
-            gridTemplateColumns: '80px 1fr 140px 110px 160px 120px 100px',
+            gridTemplateColumns: '80px 1fr 140px 110px 160px 120px 108px',
             height: TABLE_HEADER_HEIGHT,
           }}
         >

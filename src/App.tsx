@@ -7,6 +7,7 @@ import { NewSubmissionForm } from './components/NewSubmissionForm';
 import { SuperAdminSettings } from './components/SuperAdminSettings';
 import { AiOcrExtractor } from './components/AiOcrExtractor';
 import { ConsumerDirectory } from './components/ConsumerDirectory';
+import { ConsumerProfilePage } from './components/ConsumerProfilePage';
 import { IdentityGuard } from './components/IdentityGuard';
 import { Loader2, UserCircle } from 'lucide-react';
 import { UserProfile } from './types';
@@ -156,6 +157,16 @@ export default function App() {
                 <IdentityGuard>
                   <LayoutWrapper profile={profile}>
                     <ConsumerDirectory profile={profile} />
+                  </LayoutWrapper>
+                </IdentityGuard>
+              }
+            />
+            <Route
+              path="/direktori/:id"
+              element={
+                <IdentityGuard>
+                  <LayoutWrapper profile={profile}>
+                    <ConsumerProfilePage profile={profile} />
                   </LayoutWrapper>
                 </IdentityGuard>
               }
