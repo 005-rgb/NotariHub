@@ -1,256 +1,318 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  Users, 
-  Briefcase, 
-  CheckCircle2, 
-  TrendingUp, 
-  MoreVertical, 
-  Calendar, 
-  Tag, 
-  ChevronLeft, 
-  ChevronRight,
-  Loader2,
-  Search
+import React from 'react';
+import {
+  CheckCircle2,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  CalendarDays,
+  Layers,
+  ArrowRight,
 } from 'lucide-react';
-import { NotaryHttpClient } from '../lib/NotaryHttpClient';
-import { FolderListItem, PaginatedResponse } from '../types';
 import { cn } from '../lib/utils';
-import { useUi } from '../context/UiContext';
 import { BulletinBoard } from './BulletinBoard';
 
-export const Dashboard: React.FC<{ role: string; authorName?: string }> = ({ role, authorName = 'Notaris' }) => {
-  const [data, setData] = useState<PaginatedResponse<FolderListItem> | null>(null);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { setIsConsumerDrawerOpen, setSelectedConsumer } = useUi();
+const CATALOG_COLORS: Record<string, string> = {
+  LAN: 'bg-blue-100 text-blue-700',
+  CORP: 'bg-violet-100 text-violet-700',
+  BANK: 'bg-amber-100 text-amber-700',
+  PJJ: 'bg-emerald-100 text-emerald-700',
+  FAM: 'bg-rose-100 text-rose-700',
+};
 
-  const handleConsumerClick = (folder: FolderListItem) => {
-    setSelectedConsumer(folder);
-    setIsConsumerDrawerOpen(true);
-  };
+const ALL_TIME = {
+  total: 1284,
+  breakdown: [
+    { code: 'LAN', label: 'Pertanahan', count: 412 },
+    { code: 'CORP', label: 'Badan Hukum', count: 285 },
+    { code: 'BANK', label: 'Perbankan', count: 198 },
+    { code: 'PJJ', label: 'Perjanjian', count: 163 },
+    { code: 'FAM', label: 'Keluarga & Waris', count: 226 },
+  ],
+};
 
-  const fetchFolders = useCallback(async (pageNum: number) => {
-    setLoading(true);
-    try {
-      const res = await NotaryHttpClient.get(`/api/folders?page=${pageNum}`);
-      if (res.ok) {
-        const result = await res.json();
-        setData(result);
-      }
-    } catch (err) {
-      console.error('Failed to fetch folders:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+const ANNUAL = {
+  year: 2026,
+  selesai: 389,
+  proses: 247,
+  trend: '+14%',
+  positive: true,
+  breakdown: [
+    { code: 'LAN', selesai: 128, proses: 82 },
+    { code: 'CORP', selesai: 87, proses: 63 },
+    { code: 'BANK', selesai: 54, proses: 48 },
+    { code: 'PJJ', selesai: 42, proses: 31 },
+    { code: 'FAM', selesai: 78, proses: 23 },
+  ],
+};
 
-  useEffect(() => {
-    fetchFolders(page);
-  }, [page, fetchFolders]);
+const MONTHLY = {
+  month: 'Maret 2026',
+  selesai: 47,
+  proses: 62,
+  trend: '-8%',
+  positive: false,
+  breakdown: [
+    { code: 'LAN', selesai: 16, proses: 20 },
+    { code: 'CORP', selesai: 10, proses: 15 },
+    { code: 'BANK', selesai: 8, proses: 12 },
+    { code: 'PJJ', selesai: 6, proses: 8 },
+    { code: 'FAM', selesai: 7, proses: 7 },
+  ],
+};
 
-  const totalPages = data ? Math.ceil(data.total_records / 10) : 0;
-
-  const filteredData = useMemo(() => {
-    const raw = data?.data ?? [];
-    const q = searchQuery.trim().toLowerCase();
-    const filtered = q
-      ? raw.filter(folder => folder.client_name.toLowerCase().indexOf(q) === 0)
-      : raw;
-    return [...filtered].sort((a, b) =>
-      a.client_name.localeCompare(b.client_name, 'id', { sensitivity: 'base' })
-    );
-  }, [data, searchQuery]);
-
-  const stats = [
-    { label: 'Total Klien', value: '1,284', icon: Users, color: 'bg-blue-500', trend: '+12%' },
-    { label: 'Total Layanan', value: '452', icon: Briefcase, color: 'bg-gold', trend: '+5%' },
-    { label: 'Total Selesai', value: '389', icon: CheckCircle2, color: 'bg-emerald-500', trend: '+18%' },
-  ];
-
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-navy uppercase tracking-tight">
-            Notary <span className="text-gold">Command Center</span>
-          </h1>
-          <p className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-widest">
-            Premium Oversight & Legal Workflow Management
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Cari berkas..." 
-              className="pl-10 pr-4 py-2 rounded-xl border border-zinc-200 text-xs focus:ring-2 focus:ring-gold/20 focus:border-gold transition-all w-64"
-            />
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+      {children}
+    </p>
+  );
+}
+
+function CatalogBadge({ code }: { code: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest',
+        CATALOG_COLORS[code] ?? 'bg-zinc-100 text-zinc-600'
+      )}
+    >
+      {code}
+    </span>
+  );
+}
+
+function CardShell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col gap-4',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function AllTimeCard() {
+  return (
+    <CardShell>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-navy/5 flex items-center justify-center">
+            <Layers className="h-4 w-4 text-navy" />
           </div>
-        </div>
-      </div>
-
-      {/* Stat Widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center text-white shadow-lg", stat.color)}>
-                <stat.icon className="h-6 w-6" />
-              </div>
-              <div className="flex items-center gap-1 text-emerald-500 text-[10px] font-black uppercase">
-                <TrendingUp className="h-3 w-3" />
-                {stat.trend}
-              </div>
-            </div>
-            <div className="mt-4">
-              <h3 className="text-sm font-bold text-navy uppercase tracking-tight">{stat.label}</h3>
-              <p className="text-2xl font-black text-navy mt-1">{stat.value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Bulletin Board */}
-      <div className="bg-white rounded-[32px] border border-zinc-100 shadow-sm p-8">
-        <BulletinBoard role={role} authorName={authorName} />
-      </div>
-
-      {/* Main Table Grid */}
-      <div className="bg-white rounded-[32px] border border-zinc-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between border-b border-zinc-100 px-8 py-6">
           <div>
-            <h3 className="text-sm font-bold text-navy uppercase tracking-tight">Data Konsumen</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-              {searchQuery
-                ? `${filteredData.length} hasil ditemukan`
-                : `Total: ${data?.total_records || 0} Records`}
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Semua Masa
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1 || loading}
-              className="rounded-lg p-2 text-slate-400 hover:bg-zinc-100 disabled:opacity-30 transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-[10px] font-black text-navy uppercase tracking-widest">Page {page} of {totalPages}</span>
-            <button 
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || loading}
-              className="rounded-lg p-2 text-slate-400 hover:bg-zinc-100 disabled:opacity-30 transition-colors"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            <h3 className="font-black text-navy uppercase tracking-tight" style={{ fontSize: 14 }}>
+              Total Klien Selesai
+            </h3>
           </div>
         </div>
+        <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left font-sans">
-            <thead>
-              <tr className="border-b border-zinc-50 bg-zinc-50/50 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                <th className="px-8 py-4">No</th>
-                <th className="px-4 py-3">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Nama Konsumen</span>
-                    <div className="relative">
-                      <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" style={{ width: 14, height: 14 }} />
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Cari Nama (Contoh: Budi...)"
-                        className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs text-navy placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-gold/20 focus:border-gold transition-all font-normal normal-case tracking-normal"
-                        style={{ fontSize: 12 }}
-                      />
-                    </div>
-                  </div>
-                </th>
-                <th className="px-8 py-4">Jenis Katalog</th>
-                <th className="px-8 py-4">Tanggal Masuk</th>
-                <th className="px-8 py-4">Target Selesai</th>
-                <th className="px-8 py-4">Status Step</th>
-                <th className="px-8 py-4 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-50">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-8 py-24 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <Loader2 className="h-8 w-8 animate-spin text-gold" />
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading Records...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Users className="h-8 w-8 text-slate-200" />
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Tidak ada konsumen dengan awalan "{searchQuery}"
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredData.map((folder, idx) => (
-                <tr key={folder.id} className="group hover:bg-zinc-50/50 transition-colors text-xs">
-                  <td className="px-8 py-2 text-slate-400 font-medium">{(page - 1) * 10 + idx + 1}</td>
-                  <td className="px-4 py-2">
-                    <button 
-                      onClick={() => handleConsumerClick(folder)}
-                      className="text-left group/btn"
-                    >
-                      <p className="font-bold text-navy uppercase tracking-tight group-hover/btn:text-gold transition-colors">{folder.client_name}</p>
-                      <p className="text-[10px] text-slate-400 font-medium">{folder.nik || 'NIK Belum Terdata'}</p>
-                    </button>
-                  </td>
-                  <td className="px-8 py-2">
-                    <div className="flex items-center gap-1.5">
-                      <Tag className="h-3 w-3 text-gold" />
-                      <span className="rounded-lg bg-zinc-100 px-2.5 py-1 text-[10px] font-black text-navy uppercase tracking-widest">
-                        {folder.catalog_code}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-2 text-slate-500">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3 w-3 text-slate-300" />
-                      {new Date(folder.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </div>
-                  </td>
-                  <td className="px-8 py-2">
-                    <div className={cn(
-                      "font-bold",
-                      folder.is_overdue ? "text-red-500" : "text-navy",
-                      !folder.is_overdue && folder.target_completion_date && new Date(folder.target_completion_date).getTime() - Date.now() < 86400000 * 2 ? "text-gold" : ""
-                    )}>
-                      {folder.target_completion_date ? new Date(folder.target_completion_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                    </div>
-                  </td>
-                  <td className="px-8 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-navy uppercase tracking-tight">{folder.current_milestone}</span>
-                      {folder.is_vetoed && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[8px] font-black text-red-600 uppercase tracking-widest">
-                          Vetoed
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-8 py-2 text-right">
-                    <button className="rounded-lg p-2 text-slate-400 hover:bg-zinc-100 hover:text-navy transition-colors">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div>
+        <p
+          className="font-black text-navy leading-none"
+          style={{ fontSize: 40, color: '#0F172A' }}
+        >
+          {ALL_TIME.total.toLocaleString('id-ID')}
+        </p>
+        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+          Klien Terselesaikan
+        </p>
+      </div>
+
+      <div className="border-t border-slate-100 pt-3 space-y-2">
+        <SectionLabel>Breakdown per Katalog</SectionLabel>
+        <div className="space-y-1.5">
+          {ALL_TIME.breakdown.map((b) => (
+            <div key={b.code} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CatalogBadge code={b.code} />
+                <span className="text-[10px] text-slate-500 font-medium">{b.label}</span>
+              </div>
+              <span className="text-[11px] font-black text-navy" style={{ color: '#C2A35D' }}>
+                {b.count.toLocaleString('id-ID')}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </CardShell>
+  );
+}
+
+function AnnualCard() {
+  return (
+    <CardShell>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-gold/10 flex items-center justify-center">
+            <BarChart3 className="h-4 w-4 text-gold" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Tahun {ANNUAL.year}
+            </p>
+            <h3 className="font-black text-navy uppercase tracking-tight" style={{ fontSize: 14 }}>
+              Performa Tahun Berjalan
+            </h3>
+          </div>
+        </div>
+        <div
+          className={cn(
+            'flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg',
+            ANNUAL.positive ? 'text-emerald-600 bg-emerald-50' : 'text-red-500 bg-red-50'
+          )}
+        >
+          {ANNUAL.positive ? (
+            <TrendingUp className="h-3 w-3" />
+          ) : (
+            <TrendingDown className="h-3 w-3" />
+          )}
+          {ANNUAL.trend}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-emerald-50 rounded-xl p-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-1">
+            Selesai
+          </p>
+          <p className="text-2xl font-black text-emerald-700 leading-none">{ANNUAL.selesai}</p>
+        </div>
+        <div className="bg-amber-50 rounded-xl p-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">
+            Proses
+          </p>
+          <p className="text-2xl font-black text-amber-700 leading-none">{ANNUAL.proses}</p>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 pt-3 space-y-2">
+        <SectionLabel>Breakdown per Katalog</SectionLabel>
+        <div className="space-y-1.5">
+          {ANNUAL.breakdown.map((b) => (
+            <div key={b.code} className="flex items-center justify-between">
+              <CatalogBadge code={b.code} />
+              <div className="flex items-center gap-3 text-[10px] font-bold">
+                <span className="text-emerald-600">{b.selesai} selesai</span>
+                <ArrowRight className="h-2.5 w-2.5 text-slate-300" />
+                <span className="text-amber-600">{b.proses} proses</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </CardShell>
+  );
+}
+
+function MonthlyCard() {
+  return (
+    <CardShell>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-blue-50 flex items-center justify-center">
+            <CalendarDays className="h-4 w-4 text-blue-500" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              {MONTHLY.month}
+            </p>
+            <h3 className="font-black text-navy uppercase tracking-tight" style={{ fontSize: 14 }}>
+              Aktivitas Bulan Ini
+            </h3>
+          </div>
+        </div>
+        <div
+          className={cn(
+            'flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg',
+            MONTHLY.positive ? 'text-emerald-600 bg-emerald-50' : 'text-red-500 bg-red-50'
+          )}
+        >
+          {MONTHLY.positive ? (
+            <TrendingUp className="h-3 w-3" />
+          ) : (
+            <TrendingDown className="h-3 w-3" />
+          )}
+          {MONTHLY.trend}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-emerald-50 rounded-xl p-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-1">
+            Selesai
+          </p>
+          <p className="text-2xl font-black text-emerald-700 leading-none">{MONTHLY.selesai}</p>
+        </div>
+        <div className="bg-blue-50 rounded-xl p-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">
+            Proses
+          </p>
+          <p className="text-2xl font-black text-blue-700 leading-none">{MONTHLY.proses}</p>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 pt-3 space-y-2">
+        <SectionLabel>Breakdown per Katalog</SectionLabel>
+        <div className="space-y-1.5">
+          {MONTHLY.breakdown.map((b) => (
+            <div key={b.code} className="flex items-center justify-between">
+              <CatalogBadge code={b.code} />
+              <div className="flex items-center gap-3 text-[10px] font-bold">
+                <span className="text-emerald-600">{b.selesai} selesai</span>
+                <ArrowRight className="h-2.5 w-2.5 text-slate-300" />
+                <span className="text-blue-600">{b.proses} proses</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </CardShell>
+  );
+}
+
+export const Dashboard: React.FC<{ role: string; authorName?: string }> = ({
+  role,
+  authorName = 'Notaris',
+}) => {
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-xl font-black text-navy uppercase tracking-tight">
+          Notary <span style={{ color: '#C2A35D' }}>Command Center</span>
+        </h1>
+        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+          Ringkasan Statistik & Pengumuman Internal
+        </p>
+      </div>
+
+      {/* 2-Column Grid — Left: 3 Recap Cards | Right: Bulletin Board */}
+      <div className="grid grid-cols-2 gap-6 items-start">
+        {/* LEFT COLUMN — 3 Recapitulation Cards */}
+        <div className="space-y-4">
+          <AllTimeCard />
+          <AnnualCard />
+          <MonthlyCard />
+        </div>
+
+        {/* RIGHT COLUMN — Bulletin Board */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+          <BulletinBoard role={role} authorName={authorName} />
         </div>
       </div>
     </div>
