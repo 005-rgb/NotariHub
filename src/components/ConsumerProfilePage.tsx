@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  Paperclip,
   ChevronDown,
   Pencil,
   Trash2,
@@ -20,6 +19,11 @@ import {
   Lock,
   LockOpen,
   Save,
+  Plus,
+  Link as LinkIcon,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { NotaryHttpClient } from '../lib/NotaryHttpClient';
 import { FolderListItem, UserProfile } from '../types';
@@ -30,6 +34,50 @@ interface ConsumerProfilePageProps {
 }
 
 type StepLockStatus = 'OPEN' | 'COMPLETED' | 'LOCKED';
+
+/* ─── Attachment Types ───────────────────────────────────────────────── */
+interface AttachFile {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  type: 'file';
+  uploading?: boolean;
+  progress?: number;
+}
+
+interface AttachLink {
+  id: string;
+  url: string;
+  type: 'link';
+}
+
+type Attachment = AttachFile | AttachLink;
+
+const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png'];
+const MAX_FILES = 2;
+const MAX_SIZE_BYTES = 2 * 1024 * 1024;
+
+function isValidUrl(str: string): boolean {
+  try {
+    const u = new URL(str);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function getFileIcon(mimeType: string) {
+  if (mimeType === 'application/pdf') return <FileText className="h-3 w-3 shrink-0 text-red-500" />;
+  return <ImageIcon className="h-3 w-3 shrink-0 text-emerald-500" />;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 /* ─── Catalog Steps ─────────────────────────────────────────────────── */
 const CATALOG_STEPS: Record<string, string[]> = {
@@ -93,7 +141,7 @@ const DEFAULT_STEPS = [
   'Penyelesaian',
 ];
 
-/* ─── Mock Data Generators ──────────────────────────────────────────── */
+/* ─── Mock Data ──────────────────────────────────────────────────────── */
 const STEP_NOTES = [
   'Berkas diterima lengkap. Nomor urut registrasi telah ditetapkan.',
   'Identitas para pihak telah terverifikasi sesuai data kependudukan nasional.',
@@ -105,15 +153,15 @@ const STEP_NOTES = [
   'Salinan akta resmi diserahkan kepada seluruh pihak yang berhak.',
 ];
 
-const STEP_ATTACHMENTS = [
-  ['KTP_Pembeli.pdf', 'KTP_Penjual.pdf'],
-  ['BPJS_Kependudukan.pdf', 'KK_Pembeli.pdf'],
-  ['Sertifikat_Tanah.pdf', 'SHGB_Asli.pdf', 'IMB.pdf'],
-  ['BPHTB_Setoran.pdf', 'PPH_Final.pdf'],
-  ['Draf_AJB_Rev1.pdf'],
-  ['BA_Pembacaan.pdf', 'Checklist_Hadir.pdf'],
-  ['Akta_TTD_Scan.pdf'],
-  ['Salinan_Akta.pdf', 'Tanda_Terima.pdf'],
+const MOCK_ATTACHMENTS_DATA: Array<Array<{ name: string; mimeType: string; size: number }>> = [
+  [{ name: 'KTP_Pembeli.pdf', mimeType: 'application/pdf', size: 312000 }, { name: 'KTP_Penjual.pdf', mimeType: 'application/pdf', size: 298000 }],
+  [{ name: 'BPJS_Kependudukan.pdf', mimeType: 'application/pdf', size: 420000 }, { name: 'KK_Pembeli.jpg', mimeType: 'image/jpeg', size: 185000 }],
+  [{ name: 'Sertifikat_Tanah.pdf', mimeType: 'application/pdf', size: 980000 }, { name: 'SHGB_Asli.pdf', mimeType: 'application/pdf', size: 760000 }],
+  [{ name: 'BPHTB_Setoran.pdf', mimeType: 'application/pdf', size: 210000 }, { name: 'PPH_Final.pdf', mimeType: 'application/pdf', size: 195000 }],
+  [{ name: 'Draf_AJB_Rev1.pdf', mimeType: 'application/pdf', size: 540000 }],
+  [{ name: 'BA_Pembacaan.pdf', mimeType: 'application/pdf', size: 310000 }, { name: 'Checklist_Hadir.jpg', mimeType: 'image/jpeg', size: 92000 }],
+  [{ name: 'Akta_TTD_Scan.pdf', mimeType: 'application/pdf', size: 670000 }],
+  [{ name: 'Salinan_Akta.pdf', mimeType: 'application/pdf', size: 820000 }, { name: 'Tanda_Terima.png', mimeType: 'image/png', size: 130000 }],
 ];
 
 function getMockNote(stepIdx: number, status: StepLockStatus): string {
@@ -121,21 +169,25 @@ function getMockNote(stepIdx: number, status: StepLockStatus): string {
   return STEP_NOTES[stepIdx % STEP_NOTES.length];
 }
 
-function getMockAttachments(stepIdx: number, status: StepLockStatus): string[] {
+function initMockAttachments(stepIdx: number, status: StepLockStatus): Attachment[] {
   if (status === 'LOCKED') return [];
-  if (status === 'OPEN') return [STEP_ATTACHMENTS[stepIdx % STEP_ATTACHMENTS.length][0]];
-  return STEP_ATTACHMENTS[stepIdx % STEP_ATTACHMENTS.length];
+  const pool = MOCK_ATTACHMENTS_DATA[stepIdx % MOCK_ATTACHMENTS_DATA.length];
+  const files = status === 'COMPLETED' ? pool : pool.slice(0, 1);
+  return files.map((f, i) => ({
+    id: `mock-${stepIdx}-${i}`,
+    name: f.name,
+    size: f.size,
+    mimeType: f.mimeType,
+    type: 'file' as const,
+  }));
 }
 
 function getMockTimestamp(createdAt: string, stepIdx: number): string {
   const base = new Date(createdAt).getTime();
   const offset = stepIdx * 2 * 24 * 60 * 60 * 1000;
   return new Date(base + offset).toLocaleString('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
   });
 }
 
@@ -194,7 +246,7 @@ const SkeletonProfile: React.FC = () => (
       <div key={i} className="flex gap-4">
         <div className="h-20 w-40 rounded-xl bg-zinc-100 shrink-0" />
         <div className="flex-1 h-20 rounded-xl bg-zinc-100" />
-        <div className="h-20 w-44 rounded-xl bg-zinc-100 shrink-0" />
+        <div className="h-20 w-48 rounded-xl bg-zinc-100 shrink-0" />
       </div>
     ))}
   </div>
@@ -230,9 +282,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           onClick={onConfirm}
           className={cn(
             'text-xs font-black text-white rounded-xl px-4 py-2 transition-colors',
-            confirmColor === 'gold'
-              ? 'bg-amber-500 hover:bg-amber-600'
-              : 'bg-red-500 hover:bg-red-600',
+            confirmColor === 'gold' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-500 hover:bg-red-600',
           )}
         >
           {confirmLabel}
@@ -241,6 +291,229 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     </div>
   </div>
 );
+
+/* ─── Attachment Box Component ───────────────────────────────────────── */
+interface AttachmentBoxProps {
+  stepIdx: number;
+  status: StepLockStatus;
+  attachments: Attachment[];
+  linkInput: string;
+  linkError: string;
+  onFileSelect: (stepIdx: number, files: FileList) => void;
+  onLinkInputChange: (stepIdx: number, val: string) => void;
+  onLinkAdd: (stepIdx: number) => void;
+  onRemove: (stepIdx: number, attId: string) => void;
+}
+
+const AttachmentBox: React.FC<AttachmentBoxProps> = ({
+  stepIdx,
+  status,
+  attachments,
+  linkInput,
+  linkError,
+  onFileSelect,
+  onLinkInputChange,
+  onLinkAdd,
+  onRemove,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isOpen = status === 'OPEN';
+  const fileCount = attachments.filter(a => a.type === 'file').length;
+  const canAddFile = isOpen && fileCount < MAX_FILES;
+
+  const fileAttachments = attachments.filter((a): a is AttachFile => a.type === 'file');
+  const linkAttachments = attachments.filter((a): a is AttachLink => a.type === 'link');
+
+  return (
+    <div className={cn(
+      'rounded-xl border px-3 py-2.5',
+      status === 'COMPLETED' && 'bg-emerald-50/30 border-emerald-100',
+      status === 'OPEN' && 'bg-white border-amber-200',
+      status === 'LOCKED' && 'bg-slate-50/50 border-slate-100',
+    )}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          Lampiran
+          {attachments.length > 0 && (
+            <span className="ml-1 text-slate-300">({attachments.length})</span>
+          )}
+        </p>
+        <div className="flex items-center gap-1">
+          {status === 'COMPLETED' && <Lock className="h-2.5 w-2.5 text-emerald-400" />}
+          {isOpen && (
+            <span className={cn(
+              'text-[9px] font-bold',
+              fileCount >= MAX_FILES ? 'text-slate-300' : 'text-amber-400',
+            )}>
+              {fileCount}/{MAX_FILES}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* File list */}
+      {fileAttachments.length > 0 && (
+        <div className="space-y-1.5 mb-2">
+          {fileAttachments.map(att => (
+            <div key={att.id} className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 group/att">
+                {getFileIcon(att.mimeType)}
+                <span className={cn(
+                  'text-[11px] font-medium truncate flex-1 leading-tight',
+                  isOpen ? 'text-slate-700' : 'text-slate-500',
+                )}>
+                  {att.name}
+                </span>
+                {isOpen && !att.uploading && (
+                  <button
+                    onClick={() => onRemove(stepIdx, att.id)}
+                    className="h-3.5 w-3.5 rounded flex items-center justify-center text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors opacity-0 group-hover/att:opacity-100 shrink-0"
+                    title="Hapus lampiran"
+                  >
+                    <XIcon className="h-2.5 w-2.5" />
+                  </button>
+                )}
+              </div>
+              {/* Size or upload progress */}
+              {att.uploading ? (
+                <div className="flex items-center gap-1.5 pl-4">
+                  <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full transition-all duration-300"
+                      style={{ width: `${att.progress ?? 0}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] font-bold text-amber-500 shrink-0">
+                    {att.progress ?? 0}%
+                  </span>
+                </div>
+              ) : (
+                <p className="text-[9px] text-slate-300 pl-4">{formatBytes(att.size)}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Link list */}
+      {linkAttachments.length > 0 && (
+        <div className="space-y-1 mb-2">
+          {linkAttachments.map(att => (
+            <div key={att.id} className="flex items-center gap-1.5 group/att">
+              <LinkIcon className="h-3 w-3 shrink-0 text-blue-500" />
+              <span className="text-[11px] font-medium text-blue-600 truncate flex-1 leading-tight">
+                {att.url.replace(/^https?:\/\//, '').split('/')[0]}
+              </span>
+              <a
+                href={att.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-3.5 w-3.5 flex items-center justify-center text-blue-400 hover:text-blue-600 transition-colors shrink-0"
+                title="Buka di tab baru"
+              >
+                <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+              {isOpen && (
+                <button
+                  onClick={() => onRemove(stepIdx, att.id)}
+                  className="h-3.5 w-3.5 rounded flex items-center justify-center text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors opacity-0 group-hover/att:opacity-100 shrink-0"
+                  title="Hapus link"
+                >
+                  <XIcon className="h-2.5 w-2.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {attachments.length === 0 && !isOpen && (
+        <p className="text-[11px] text-zinc-300 italic">—</p>
+      )}
+
+      {/* OPEN: Upload controls */}
+      {isOpen && (
+        <div className="mt-2 space-y-2 border-t border-amber-100 pt-2">
+
+          {/* Upload button */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => canAddFile && fileInputRef.current?.click()}
+              disabled={!canAddFile}
+              className={cn(
+                'flex items-center gap-1 text-[11px] font-bold rounded-lg px-2.5 py-1.5 transition-colors border',
+                canAddFile
+                  ? 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 hover:border-amber-300'
+                  : 'text-slate-300 bg-slate-50 border-slate-100 cursor-not-allowed',
+              )}
+              title={canAddFile ? 'Tambah dokumen' : 'Batas 2 dokumen per tahap'}
+            >
+              <Plus className="h-3 w-3" />
+              Upload
+            </button>
+            <span className="text-[9px] text-slate-300 leading-tight">
+              PDF/JPG/PNG · maks 2MB
+            </span>
+          </div>
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ALLOWED_EXT.join(',')}
+            className="hidden"
+            onChange={e => {
+              if (e.target.files?.length) {
+                onFileSelect(stepIdx, e.target.files);
+                e.target.value = '';
+              }
+            }}
+          />
+
+          {/* Link input */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex-1">
+                <LinkIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-blue-400" />
+                <input
+                  type="text"
+                  value={linkInput}
+                  onChange={e => onLinkInputChange(stepIdx, e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && onLinkAdd(stepIdx)}
+                  placeholder="Paste link Drive di sini..."
+                  className={cn(
+                    'w-full pl-6 pr-2 py-1.5 text-[11px] rounded-lg border bg-white focus:outline-none transition-colors',
+                    linkError
+                      ? 'border-red-300 focus:border-red-400'
+                      : 'border-slate-200 focus:border-blue-300',
+                  )}
+                />
+              </div>
+              <button
+                onClick={() => onLinkAdd(stepIdx)}
+                disabled={!linkInput.trim()}
+                className={cn(
+                  'flex items-center justify-center h-[28px] w-[28px] rounded-lg border transition-colors shrink-0',
+                  linkInput.trim()
+                    ? 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100'
+                    : 'text-slate-300 bg-slate-50 border-slate-100 cursor-not-allowed',
+                )}
+                title="Tambahkan link"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+            {linkError && (
+              <p className="text-[10px] text-red-500 font-medium">{linkError}</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 /* ─── Main Component ─────────────────────────────────────────────────── */
 export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profile }) => {
@@ -259,6 +532,11 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
   const [confirmUnlock, setConfirmUnlock] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Attachment state
+  const [stepAttachments, setStepAttachments] = useState<Record<number, Attachment[]>>({});
+  const [linkInputs, setLinkInputs] = useState<Record<number, string>>({});
+  const [linkErrors, setLinkErrors] = useState<Record<number, string>>({});
+
   const isNotaris = profile?.role === 'NOTARIS';
 
   useEffect(() => {
@@ -270,15 +548,18 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
         const data: FolderListItem = await res.json();
         setConsumer(data);
         const steps = CATALOG_STEPS[data.catalog_code] || DEFAULT_STEPS;
-        const total = steps.length;
         const statuses = initStepStatuses(steps, data.progress_pct);
         setStepStatuses(statuses);
+
         const initialNotes: Record<number, string> = {};
+        const initialAttachments: Record<number, Attachment[]> = {};
         steps.forEach((_, idx) => {
           const note = getMockNote(idx, statuses[idx]);
           if (note) initialNotes[idx] = note;
+          initialAttachments[idx] = initMockAttachments(idx, statuses[idx]);
         });
         setNotes(initialNotes);
+        setStepAttachments(initialAttachments);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -350,6 +631,96 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
     setConfirmDelete(null);
   }, []);
 
+  /* ─── Attachment Handlers ─────────────────────────────────────────── */
+  const handleFileSelect = useCallback((stepIdx: number, files: FileList) => {
+    const file = files[0];
+    if (!file) return;
+
+    const currentFiles = (stepAttachments[stepIdx] ?? []).filter(a => a.type === 'file');
+    if (currentFiles.length >= MAX_FILES) return;
+
+    if (!ALLOWED_MIME.includes(file.type)) {
+      return;
+    }
+    if (file.size > MAX_SIZE_BYTES) {
+      return;
+    }
+
+    const newAttachment: AttachFile = {
+      id: `file-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name: file.name,
+      size: file.size,
+      mimeType: file.type,
+      type: 'file',
+      uploading: true,
+      progress: 0,
+    };
+
+    setStepAttachments(prev => ({
+      ...prev,
+      [stepIdx]: [...(prev[stepIdx] ?? []), newAttachment],
+    }));
+
+    // Simulate upload progress
+    let prog = 0;
+    const interval = setInterval(() => {
+      prog += Math.floor(Math.random() * 25) + 15;
+      if (prog >= 100) {
+        prog = 100;
+        clearInterval(interval);
+        setStepAttachments(prev => ({
+          ...prev,
+          [stepIdx]: (prev[stepIdx] ?? []).map(a =>
+            a.id === newAttachment.id
+              ? { ...a, uploading: false, progress: 100 }
+              : a,
+          ),
+        }));
+      } else {
+        setStepAttachments(prev => ({
+          ...prev,
+          [stepIdx]: (prev[stepIdx] ?? []).map(a =>
+            a.id === newAttachment.id ? { ...a, progress: prog } : a,
+          ),
+        }));
+      }
+    }, 300);
+  }, [stepAttachments]);
+
+  const handleLinkInputChange = useCallback((stepIdx: number, val: string) => {
+    setLinkInputs(prev => ({ ...prev, [stepIdx]: val }));
+    if (linkErrors[stepIdx]) {
+      setLinkErrors(prev => ({ ...prev, [stepIdx]: '' }));
+    }
+  }, [linkErrors]);
+
+  const handleLinkAdd = useCallback((stepIdx: number) => {
+    const url = (linkInputs[stepIdx] ?? '').trim();
+    if (!url) return;
+    if (!isValidUrl(url)) {
+      setLinkErrors(prev => ({ ...prev, [stepIdx]: 'URL tidak valid. Gunakan format https://...' }));
+      return;
+    }
+    const newLink: AttachLink = {
+      id: `link-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      url,
+      type: 'link',
+    };
+    setStepAttachments(prev => ({
+      ...prev,
+      [stepIdx]: [...(prev[stepIdx] ?? []), newLink],
+    }));
+    setLinkInputs(prev => ({ ...prev, [stepIdx]: '' }));
+    setLinkErrors(prev => ({ ...prev, [stepIdx]: '' }));
+  }, [linkInputs]);
+
+  const handleRemoveAttachment = useCallback((stepIdx: number, attId: string) => {
+    setStepAttachments(prev => ({
+      ...prev,
+      [stepIdx]: (prev[stepIdx] ?? []).filter(a => a.id !== attId),
+    }));
+  }, []);
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto py-2">
@@ -380,31 +751,28 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
     day: '2-digit', month: 'long', year: 'numeric',
   });
 
-  const lockStepIdx = confirmLock;
-  const unlockStepIdx = confirmUnlock;
-
   return (
     <div className="max-w-5xl mx-auto pb-12 space-y-6">
 
       {/* Confirmation Modals */}
-      {lockStepIdx !== null && (
+      {confirmLock !== null && (
         <ConfirmModal
           title="Kunci Tahap Ini?"
-          message={`Apakah Anda benar-benar akan mengunci status ajuan ini? Tahap "${steps[lockStepIdx]}" akan ditandai SELESAI dan tahap berikutnya akan dibuka.`}
+          message={`Apakah Anda benar-benar akan mengunci status ajuan ini? Tahap "${steps[confirmLock]}" akan ditandai SELESAI dan tahap berikutnya akan dibuka.`}
           confirmLabel="Simpan & Kunci"
           confirmColor="gold"
-          onConfirm={() => handleLockStep(lockStepIdx)}
+          onConfirm={() => handleLockStep(confirmLock)}
           onCancel={() => setConfirmLock(null)}
         />
       )}
 
-      {unlockStepIdx !== null && (
+      {confirmUnlock !== null && (
         <ConfirmModal
           title="Buka Kembali Tahap Ini?"
-          message={`Buka kembali tahap "${steps[unlockStepIdx]}"? Semua tahap setelah ini akan kembali TERKUNCI.`}
+          message={`Buka kembali tahap "${steps[confirmUnlock]}"? Semua tahap setelah ini akan kembali TERKUNCI.`}
           confirmLabel="Ya, Buka Kembali"
           confirmColor="red"
-          onConfirm={() => handleUnlockStep(unlockStepIdx)}
+          onConfirm={() => handleUnlockStep(confirmUnlock)}
           onCancel={() => setConfirmUnlock(null)}
         />
       )}
@@ -426,7 +794,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
           <span className="text-gold">•</span>
           <span className={cn(
             'px-2 py-0.5 rounded-md',
-            isNotaris ? 'bg-gold/10 text-gold' : 'bg-zinc-100 text-slate-500'
+            isNotaris ? 'bg-gold/10 text-gold' : 'bg-zinc-100 text-slate-500',
           )}>
             {profile?.role || 'GUEST'}
           </span>
@@ -487,13 +855,12 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
           const boxClass = getStatusBoxClass(status);
           const textClass = getStatusTextClass(status);
           const timestamp = status !== 'LOCKED' ? getMockTimestamp(consumer.created_at, idx) : null;
-          const attachments = getMockAttachments(idx, status);
           const noteText = notes[idx] ?? '';
           const isEditing = editingStep === idx;
-          const isReadOnly = status !== 'OPEN';
           const isLocked = status === 'LOCKED';
 
-          const isLast = idx === steps.length - 1 || steps.slice(idx + 1).every((_, i) => deletedSteps.has(idx + 1 + i));
+          const isLast = idx === steps.length - 1
+            || steps.slice(idx + 1).every((_, i) => deletedSteps.has(idx + 1 + i));
 
           return (
             <div key={idx}>
@@ -585,9 +952,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                         status === 'COMPLETED' && 'border-slate-200 bg-emerald-50/30',
                         status === 'LOCKED' && 'border-slate-100 bg-slate-50/50',
                       )}
-                      onClick={() => {
-                        if (status === 'OPEN') handleStartEdit(idx, noteText);
-                      }}
+                      onClick={() => { if (status === 'OPEN') handleStartEdit(idx, noteText); }}
                       title={status === 'OPEN' ? 'Klik untuk edit catatan' : undefined}
                     >
                       {noteText ? (
@@ -620,50 +985,23 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                   )}
                 </div>
 
-                {/* RIGHT: Attachments Box */}
-                <div className="shrink-0" style={{ width: 176 }}>
-                  <div className={cn(
-                    'rounded-xl border px-3 py-2.5 min-h-[64px]',
-                    status === 'COMPLETED' && 'bg-emerald-50/30 border-emerald-100',
-                    status === 'OPEN' && 'bg-white border-amber-200',
-                    status === 'LOCKED' && 'bg-slate-50/50 border-slate-100',
-                  )}>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Lampiran
-                      </p>
-                      {status === 'COMPLETED' && (
-                        <Lock className="h-2.5 w-2.5 text-emerald-400" />
-                      )}
-                    </div>
-                    {attachments.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {attachments.map((att, aIdx) => (
-                          <a
-                            key={aIdx}
-                            href="#"
-                            onClick={e => e.preventDefault()}
-                            className={cn(
-                              'flex items-center gap-1.5 text-[11px] font-medium transition-colors',
-                              isReadOnly
-                                ? 'text-slate-500 pointer-events-none'
-                                : 'text-blue-600 hover:text-blue-800 hover:underline',
-                            )}
-                          >
-                            <Paperclip className="h-3 w-3 shrink-0 text-slate-400" />
-                            <span className="truncate">{att}</span>
-                          </a>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-zinc-300 italic">—</p>
-                    )}
-                  </div>
+                {/* RIGHT: Attachment Box */}
+                <div className="shrink-0" style={{ width: 192 }}>
+                  <AttachmentBox
+                    stepIdx={idx}
+                    status={status}
+                    attachments={stepAttachments[idx] ?? []}
+                    linkInput={linkInputs[idx] ?? ''}
+                    linkError={linkErrors[idx] ?? ''}
+                    onFileSelect={handleFileSelect}
+                    onLinkInputChange={handleLinkInputChange}
+                    onLinkAdd={handleLinkAdd}
+                    onRemove={handleRemoveAttachment}
+                  />
                 </div>
 
                 {/* FAR RIGHT: Actions */}
                 <div className="shrink-0 flex flex-col items-start gap-2 pt-1" style={{ width: 124 }}>
-                  {/* Save & Lock button — OPEN step only */}
                   {status === 'OPEN' && (
                     <button
                       onClick={() => setConfirmLock(idx)}
@@ -673,8 +1011,6 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                       Simpan & Kunci
                     </button>
                   )}
-
-                  {/* Delete action — NOTARIS only */}
                   {isNotaris && (
                     confirmDelete === idx ? (
                       <div className="flex flex-col gap-1 w-full">
@@ -707,7 +1043,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                 </div>
               </div>
 
-              {/* Connector Arrow (between steps) */}
+              {/* Connector Arrow */}
               {!isLast && (
                 <div className="flex items-center" style={{ paddingLeft: 68, height: 28 }}>
                   <div className="flex flex-col items-center">
@@ -745,7 +1081,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
         ) : (
           <>
             <ShieldCheck className="h-3 w-3 text-emerald-500" />
-            <span>Mode Staf — Hanya tahap aktif yang dapat diedit.</span>
+            <span>Mode Staf — Hanya tahap aktif yang dapat diedit & dilampirkan.</span>
           </>
         )}
       </div>
