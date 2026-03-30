@@ -16,6 +16,7 @@ import { NotaryHttpClient } from '../lib/NotaryHttpClient';
 import { FolderListItem, PaginatedResponse } from '../types';
 import { cn } from '../lib/utils';
 import { useUi } from '../context/UiContext';
+import { BulletinBoard } from './BulletinBoard';
 
 export const Dashboard: React.FC<{ role: string }> = ({ role }) => {
   const [data, setData] = useState<PaginatedResponse<FolderListItem> | null>(null);
@@ -110,6 +111,11 @@ export const Dashboard: React.FC<{ role: string }> = ({ role }) => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Bulletin Board */}
+      <div className="bg-white rounded-[32px] border border-zinc-100 shadow-sm p-8">
+        <BulletinBoard role={role} />
       </div>
 
       {/* Main Table Grid */}
