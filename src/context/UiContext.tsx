@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 import { FolderListItem } from '../types';
 
 interface UiContextType {
@@ -23,19 +23,27 @@ export const UiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isConsumerDrawerOpen, setIsConsumerDrawerOpen] = useState(false);
   const [selectedConsumer, setSelectedConsumer] = useState<FolderListItem | null>(null);
 
+  const value = useMemo(() => ({
+    isSidebarOpen,
+    setIsSidebarOpen,
+    isLivePulseOpen,
+    setIsLivePulseOpen,
+    isSubmissionModalOpen,
+    setIsSubmissionModalOpen,
+    isConsumerDrawerOpen,
+    setIsConsumerDrawerOpen,
+    selectedConsumer,
+    setSelectedConsumer,
+  }), [
+    isSidebarOpen,
+    isLivePulseOpen,
+    isSubmissionModalOpen,
+    isConsumerDrawerOpen,
+    selectedConsumer,
+  ]);
+
   return (
-    <UiContext.Provider value={{ 
-      isSidebarOpen, 
-      setIsSidebarOpen, 
-      isLivePulseOpen, 
-      setIsLivePulseOpen,
-      isSubmissionModalOpen,
-      setIsSubmissionModalOpen,
-      isConsumerDrawerOpen,
-      setIsConsumerDrawerOpen,
-      selectedConsumer,
-      setSelectedConsumer
-    }}>
+    <UiContext.Provider value={value}>
       {children}
     </UiContext.Provider>
   );

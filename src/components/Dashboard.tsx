@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Users, 
   Briefcase, 
@@ -29,7 +29,7 @@ export const Dashboard: React.FC<{ role: string }> = ({ role }) => {
     setIsConsumerDrawerOpen(true);
   };
 
-  const fetchFolders = async (pageNum: number) => {
+  const fetchFolders = useCallback(async (pageNum: number) => {
     setLoading(true);
     try {
       const res = await NotaryHttpClient.get(`/api/folders?page=${pageNum}`);
@@ -42,11 +42,11 @@ export const Dashboard: React.FC<{ role: string }> = ({ role }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFolders(page);
-  }, [page]);
+  }, [page, fetchFolders]);
 
   const totalPages = data ? Math.ceil(data.total_records / 10) : 0;
 

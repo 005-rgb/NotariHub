@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -49,10 +49,17 @@ export const ConsumerDetailDrawer: React.FC<ConsumerDetailDrawerProps> = ({
   profile,
   onStatusUpdate
 }) => {
-  const isNotaris = profile?.role === 'NOTARIS';
   const [currentStatus, setCurrentStatus] = useState(data?.current_milestone || '');
 
+  useEffect(() => {
+    if (data?.current_milestone) {
+      setCurrentStatus(data.current_milestone);
+    }
+  }, [data?.current_milestone]);
+
   if (!data) return null;
+
+  const isNotaris = profile?.role === 'NOTARIS';
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
