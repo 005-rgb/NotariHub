@@ -1023,8 +1023,17 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
           const isEditing = editingStep === idx;
           const isLocked = status === 'LOCKED';
           const isFirst = idx === 0;
-
           const isLast = idx === steps.length - 1;
+
+          // ── LIFO Rule: button eligible only when N+1 is LOCKED (or N is last step)
+          const nextStatus: StepLockStatus | null = idx + 1 < steps.length
+            ? (stepStatuses[idx + 1] ?? 'LOCKED')
+            : null;
+          const isLifoEligible = isNotaris &&
+            (status === 'OPEN' || status === 'COMPLETED') &&
+            (nextStatus === null || nextStatus === 'LOCKED');
+          // Non-eligible COMPLETED steps get a blocked tooltip instead
+          const showBlockedHint = isNotaris && status === 'COMPLETED' && !isLifoEligible;
 
           return (
             <div key={idx}>
@@ -1145,7 +1154,7 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                 </div>
 
                 {/* FAR RIGHT: Actions */}
-                <div className="shrink-0 flex flex-col items-start gap-2 pt-1" style={{ width: 124 }}>
+                <div className="shrink-0 flex flex-col items-start gap-2 pt-1" style={{ width: 132 }}>
                   {/* Save & Lock — OPEN step */}
                   {status === 'OPEN' && (
                     <button
@@ -1157,8 +1166,8 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                     </button>
                   )}
 
-                  {/* Hapus Proses Ini — NOTARIS only, OPEN or COMPLETED steps */}
-                  {isNotaris && (status === 'OPEN' || status === 'COMPLETED') && (
+                  {/* LIFO-gated Rollback / Purge button — only on eligible step */}
+                  {isLifoEligible && (
                     <button
                       onClick={() => {
                         if (isFirst) {
@@ -1169,19 +1178,31 @@ export const ConsumerProfilePage: React.FC<ConsumerProfilePageProps> = ({ profil
                         }
                       }}
                       className={cn(
-                        'flex items-center gap-1 text-[11px] font-medium transition-all',
+                        'flex items-center gap-1 text-[11px] font-medium',
+                        'opacity-0 group-hover/row:opacity-100',
+                        'transition-all duration-200',
                         isFirst
-                          ? 'text-red-600 hover:text-red-800 opacity-0 group-hover/row:opacity-100'
-                          : 'text-red-500 hover:text-red-700 opacity-0 group-hover/row:opacity-100',
+                          ? 'text-red-600 hover:text-red-800'
+                          : 'text-red-500 hover:text-red-700',
                       )}
-                      title={isFirst ? 'Hapus ajuan ini secara permanen' : 'Rollback ke tahap sebelumnya'}
+                      title={isFirst ? 'Hapus ajuan ini secara permanen' : 'Rollback ke tahap sebelumnya (LIFO)'}
                     >
                       {isFirst ? (
-                        <><Skull className="h-3 w-3" /> Hapus Ajuan</>
+                        <><Skull className="h-3 w-3 shrink-0" /> Hapus Ajuan</>
                       ) : (
-                        <><RotateCcw className="h-3 w-3" /> Hapus Proses</>
+                        <><RotateCcw className="h-3 w-3 shrink-0" /> Hapus Proses</>
                       )}
                     </button>
+                  )}
+
+                  {/* Blocked hint — NOTARIS sees this on non-eligible COMPLETED steps */}
+                  {showBlockedHint && (
+                    <div className="opacity-0 group-hover/row:opacity-100 transition-all duration-200 flex items-start gap-1 max-w-[128px]">
+                      <Lock className="h-2.5 w-2.5 text-slate-300 shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-slate-300 leading-tight italic">
+                        Hapus tahap terbaru terlebih dahulu
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
