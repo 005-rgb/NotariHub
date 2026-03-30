@@ -577,6 +577,16 @@ async function startServer() {
     res.json(consumer);
   });
 
+  app.patch('/api/consumers/:id', (req, res) => {
+    const consumer = folder_list_data.find(f => f.id === req.params.id);
+    if (!consumer) return res.status(404).json({ error: 'Consumer not found' });
+    const { progress_pct, current_milestone, step_statuses } = req.body;
+    if (progress_pct !== undefined) (consumer as any).progress_pct = progress_pct;
+    if (current_milestone !== undefined) (consumer as any).current_milestone = current_milestone;
+    if (step_statuses !== undefined) (consumer as any).step_statuses = step_statuses;
+    res.json(consumer);
+  });
+
   app.get('/api/tenants/:id', (req, res) => {
     // ... existing logic ...
     const tenant = tenants.find(t => t.id === req.params.id);
