@@ -4,7 +4,7 @@ import {
   ToggleLeft, ToggleRight, Activity, ChevronDown, Search,
   UserPlus, Lock, X as XIcon, Eye, EyeOff, Check,
   AlertTriangle, CheckSquare, Square, Building2, Plus,
-  Pencil, Trash2, Phone,
+  Pencil, Trash2, Phone, KeyRound,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { StaffMember, UserProfile, UserRole } from '../types';
@@ -22,6 +22,7 @@ interface Branch {
   name: string;
   code: string;
   alamat: string;
+  phone: string;
   kepala: string;
   staff_count: number;
   created_at: string;
@@ -93,8 +94,8 @@ const SPESIALISASI_OPTIONS: Record<StaffRole, string[]> = {
 
 /* ─── Initial Data ────────────────────────────────────────────────────── */
 const INITIAL_BRANCHES: Branch[] = [
-  { id: 'cab-1', name: 'Cabang I', code: 'CAB-I', alamat: 'Jakarta Pusat', kepala: 'Notaris Utama', staff_count: 4, created_at: '2022-01-15' },
-  { id: 'cab-2', name: 'Cabang II', code: 'CAB-II', alamat: 'Jakarta Selatan', kepala: 'Notaris Junior', staff_count: 2, created_at: '2023-03-10' },
+  { id: 'cab-1', name: 'Cabang I', code: 'CAB-I', alamat: 'Jl. Merdeka No. 10, Jakarta Pusat', phone: '02112345678', kepala: 'Notaris Utama', staff_count: 4, created_at: '2022-01-15' },
+  { id: 'cab-2', name: 'Cabang II', code: 'CAB-II', alamat: 'Jl. Gatot Subroto No. 45, Jakarta Selatan', phone: '02187654321', kepala: 'Notaris Junior', staff_count: 2, created_at: '2023-03-10' },
 ];
 
 const INITIAL_STAFF: (StaffMember & { phone?: string; cabang?: string })[] = [
@@ -160,40 +161,42 @@ const Toast: React.FC<{ message: string; visible: boolean }> = ({ message, visib
   </div>
 );
 
+/* ─── Helpers ─────────────────────────────────────────────────────────── */
+function toRoman(n: number): string {
+  const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
+  const syms = ['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
+  let result = '';
+  let num = n;
+  for (let i = 0; i < vals.length; i++) {
+    while (num >= vals[i]) { result += syms[i]; num -= vals[i]; }
+  }
+  return result;
+}
+
 /* ─── Add Branch Modal ────────────────────────────────────────────────── */
 interface AddBranchModalProps {
   onClose: () => void;
-  onSubmit: (b: { name: string; alamat: string; kepala: string }) => void;
+  onSubmit: (b: { name: string; alamat: string; phone: string; kepala: string }) => void;
   nextIndex: number;
 }
 const AddBranchModal: React.FC<AddBranchModalProps> = ({ onClose, onSubmit, nextIndex }) => {
   const [name, setName] = useState(`Cabang ${toRoman(nextIndex)}`);
   const [alamat, setAlamat] = useState('');
+  const [phone, setPhone] = useState('');
   const [kepala, setKepala] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  function toRoman(n: number): string {
-    const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
-    const syms = ['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
-    let result = '';
-    let num = n;
-    for (let i = 0; i < vals.length; i++) {
-      while (num >= vals[i]) { result += syms[i]; num -= vals[i]; }
-    }
-    return result;
-  }
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = 'Nama cabang wajib diisi';
-    if (!alamat.trim()) e.alamat = 'Alamat/Wilayah wajib diisi';
+    if (!alamat.trim()) e.alamat = 'Alamat cabang wajib diisi';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSubmit = () => {
     if (!validate()) return;
-    onSubmit({ name: name.trim(), alamat: alamat.trim(), kepala: kepala.trim() });
+    onSubmit({ name: name.trim(), alamat: alamat.trim(), phone: phone.trim(), kepala: kepala.trim() });
   };
 
   useEffect(() => {
@@ -207,47 +210,221 @@ const AddBranchModal: React.FC<AddBranchModalProps> = ({ onClose, onSubmit, next
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
+
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/60">
           <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-xl bg-navy/5 flex items-center justify-center">
-              <Building2 className="h-3.5 w-3.5 text-navy" />
+            <div className="h-8 w-8 rounded-xl bg-navy/5 flex items-center justify-center">
+              <Building2 className="h-4 w-4 text-navy" />
             </div>
             <div>
               <p className="text-sm font-black text-navy">Tambah Cabang Baru</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manajemen Cabang</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Manajemen Cabang — Input Data Kantor</p>
             </div>
           </div>
           <button onClick={onClose} className="h-7 w-7 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 transition-colors">
             <XIcon className="h-4 w-4" />
           </button>
         </div>
-        <div className="px-5 py-4 space-y-3">
-          <div>
-            <FieldLabel required>Nama Cabang</FieldLabel>
-            <input value={name} onChange={e => setName(e.target.value)} className={inputCls(!!errors.name)} placeholder="Cabang I, Cabang II, dst." />
-            {errors.name && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.name}</p>}
+
+        {/* Body */}
+        <div className="px-5 py-4 space-y-4">
+
+          {/* Row 1: Nama + Telepon */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <FieldLabel required>Nama Cabang</FieldLabel>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className={inputCls(!!errors.name)}
+                placeholder="Cabang I, Cabang II, dst."
+              />
+              {errors.name && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.name}</p>}
+            </div>
+            <div>
+              <FieldLabel>No. Telepon Cabang</FieldLabel>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400 pointer-events-none" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  className={cn(inputCls(), 'pl-8')}
+                  placeholder="021xxxxxxx"
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Alamat — full-width textarea */}
           <div>
-            <FieldLabel required>Alamat / Wilayah</FieldLabel>
-            <input value={alamat} onChange={e => setAlamat(e.target.value)} className={inputCls(!!errors.alamat)} placeholder="Contoh: Jakarta Selatan" />
+            <FieldLabel required>Alamat Lengkap Cabang</FieldLabel>
+            <textarea
+              rows={3}
+              value={alamat}
+              onChange={e => setAlamat(e.target.value)}
+              className={cn(inputCls(!!errors.alamat), 'resize-none leading-relaxed')}
+              placeholder="Jl. Nama Jalan No. XX, Kelurahan, Kecamatan, Kota / Kabupaten"
+            />
             {errors.alamat && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.alamat}</p>}
           </div>
+
+          {/* Kepala */}
           <div>
             <FieldLabel>Kepala Cabang</FieldLabel>
-            <input value={kepala} onChange={e => setKepala(e.target.value)} className={inputCls()} placeholder="Nama kepala cabang (opsional)" />
+            <input
+              value={kepala}
+              onChange={e => setKepala(e.target.value)}
+              className={inputCls()}
+              placeholder="Nama kepala cabang (opsional)"
+            />
           </div>
         </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100 bg-slate-50/60">
+          <p className="text-[10px] font-bold text-slate-400"><span className="text-rose-400">*</span> Wajib diisi</p>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="text-xs font-bold text-slate-500 hover:text-navy border border-slate-200 rounded-xl px-4 py-2 transition-colors">
+              Batal
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="flex items-center gap-1.5 text-xs font-black text-navy bg-[#C2A35D] hover:bg-[#B19251] rounded-xl px-4 py-2 transition-colors shadow-sm active:scale-95"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Simpan Cabang
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Reset Password Modal ────────────────────────────────────────────── */
+interface ResetPasswordModalProps {
+  staffName: string;
+  onClose: () => void;
+  onConfirm: (newPassword: string) => void;
+}
+const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({ staffName, onClose, onConfirm }) => {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [errors, setErrors] = useState<{ password?: string; confirm?: string }>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const validate = () => {
+    const e: { password?: string; confirm?: string } = {};
+    if (!password) e.password = 'Password baru wajib diisi';
+    else if (password.length < 6) e.password = 'Min. 6 karakter';
+    if (!confirm) e.confirm = 'Konfirmasi password wajib diisi';
+    else if (confirm !== password) e.confirm = 'Password tidak cocok';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleConfirm = async () => {
+    if (!validate()) return;
+    setSubmitting(true);
+    await new Promise(r => setTimeout(r, 500));
+    setSubmitting(false);
+    onConfirm(password);
+  };
+
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-xl bg-amber-50 flex items-center justify-center">
+              <KeyRound className="h-4 w-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-navy">Reset Password Staf</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Aksi Privileged — NOTARIS Only</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="h-7 w-7 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 transition-colors">
+            <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Warning Banner */}
+        <div className="mx-5 mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-[10px] font-black text-amber-700">Konfirmasi Reset Password</p>
+            <p className="text-[10px] font-bold text-amber-600 mt-0.5 leading-relaxed">
+              Password akun <span className="font-black text-amber-800">{staffName}</span> akan direset. Staf harus login ulang menggunakan password baru.
+            </p>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-4 space-y-3">
+          <div>
+            <FieldLabel required>Password Baru</FieldLabel>
+            <div className="relative">
+              <input
+                type={showPw ? 'text' : 'password'}
+                value={password}
+                onChange={e => { setPassword(e.target.value); if (errors.password) setErrors(p => ({ ...p, password: '' })); }}
+                placeholder="Min. 6 karakter"
+                className={cn(inputCls(!!errors.password), 'pr-9')}
+              />
+              <button type="button" onClick={() => setShowPw(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            {errors.password && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.password}</p>}
+          </div>
+          <div>
+            <FieldLabel required>Konfirmasi Password</FieldLabel>
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirm}
+                onChange={e => { setConfirm(e.target.value); if (errors.confirm) setErrors(p => ({ ...p, confirm: '' })); }}
+                placeholder="Ulangi password baru"
+                className={cn(inputCls(!!errors.confirm), 'pr-9')}
+              />
+              <button type="button" onClick={() => setShowConfirm(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                {showConfirm ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+            {errors.confirm && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.confirm}</p>}
+          </div>
+        </div>
+
+        {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50/60">
-          <button onClick={onClose} className="text-xs font-bold text-slate-500 hover:text-navy border border-slate-200 rounded-xl px-4 py-2 transition-colors">
+          <button onClick={onClose} disabled={submitting} className="text-xs font-bold text-slate-500 hover:text-navy border border-slate-200 rounded-xl px-4 py-2 transition-colors disabled:opacity-40">
             Batal
           </button>
           <button
-            onClick={handleSubmit}
-            className="flex items-center gap-1.5 text-xs font-black text-navy bg-[#C2A35D] hover:bg-[#B19251] rounded-xl px-4 py-2 transition-colors shadow-sm"
+            onClick={handleConfirm}
+            disabled={submitting}
+            className="flex items-center gap-1.5 text-xs font-black text-navy bg-[#C2A35D] hover:bg-[#B19251] rounded-xl px-4 py-2 transition-all shadow-sm disabled:opacity-60 active:scale-95"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Simpan Cabang
+            {submitting
+              ? <><div className="h-3 w-3 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />Memperbarui...</>
+              : <><KeyRound className="h-3.5 w-3.5" />Reset Password</>}
           </button>
         </div>
       </div>
@@ -496,6 +673,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ profile }) => 
   const [cabangDropdown, setCabangDropdown] = useState(false);
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [showAddBranch, setShowAddBranch] = useState(false);
+  const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
   const [toast, setToast] = useState({ message: '', visible: false });
   const roleRef = useRef<HTMLDivElement>(null);
   const cabangRef = useRef<HTMLDivElement>(null);
@@ -519,19 +697,26 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ profile }) => 
     setStaffList(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } : s));
   };
 
-  const handleAddBranch = (data: { name: string; alamat: string; kepala: string }) => {
+  const handleAddBranch = (data: { name: string; alamat: string; phone: string; kepala: string }) => {
     const newBranch: Branch = {
       id: `cab-${Date.now()}`,
       name: data.name,
       code: `CAB-${branches.length + 1}`,
       alamat: data.alamat,
+      phone: data.phone,
       kepala: data.kepala || 'Belum ditetapkan',
       staff_count: 0,
       created_at: new Date().toISOString().split('T')[0],
     };
     setBranches(prev => [...prev, newBranch]);
     setShowAddBranch(false);
-    showToast(`Cabang "${data.name}" berhasil ditambahkan.`);
+    showToast(`Cabang Baru "${data.name}" Berhasil Dibuat.`);
+  };
+
+  const handleResetPassword = (newPassword: string) => {
+    if (!isNotaris || !resetTarget) return;
+    setResetTarget(null);
+    showToast(`Password Staf ${resetTarget.name} Berhasil Diperbarui.`);
   };
 
   const handleDeleteBranch = (id: string) => {
@@ -575,6 +760,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ profile }) => 
     <>
       {showAddBranch && <AddBranchModal nextIndex={branches.length + 1} onClose={() => setShowAddBranch(false)} onSubmit={handleAddBranch} />}
       {showAddStaff && <AddStaffModal branches={branches} onClose={() => setShowAddStaff(false)} onSubmit={handleAddStaff} />}
+      {resetTarget && isNotaris && <ResetPasswordModal staffName={resetTarget.name} onClose={() => setResetTarget(null)} onConfirm={handleResetPassword} />}
       <Toast message={toast.message} visible={toast.visible} />
 
       <div className="space-y-5 pb-12">
@@ -682,6 +868,12 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ profile }) => 
                       <Shield className="h-3 w-3 text-slate-400 mt-0.5 shrink-0" />
                       <p className="text-xs text-slate-500">{branch.kepala}</p>
                     </div>
+                    {branch.phone && (
+                      <div className="flex items-start gap-1.5">
+                        <Phone className="h-3 w-3 text-slate-400 mt-0.5 shrink-0" />
+                        <p className="text-xs font-mono text-slate-500">{branch.phone}</p>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                       <div className="flex items-center gap-1.5">
                         <Users className="h-3 w-3 text-slate-400" />
@@ -804,11 +996,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ profile }) => 
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/30">
-                    {['No', 'Nama Staf', 'Role', 'Cabang', 'No. Telp', 'Beban Kerja', 'Status'].map((h, i) => (
+                    {['No', 'Nama Staf', 'Role', 'Cabang', 'No. Telp', 'Beban Kerja', 'Status', 'Aksi'].map((h, i) => (
                       <th key={h} className={cn(
                         'text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2',
                         i === 0 ? 'text-center w-10' : 'text-left',
-                        h === 'Status' ? 'text-center' : '',
+                        (h === 'Status' || h === 'Aksi') ? 'text-center' : '',
                       )}>
                         {h}
                       </th>
@@ -818,7 +1010,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ profile }) => 
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-10 text-xs font-bold text-slate-300">
+                      <td colSpan={8} className="text-center py-10 text-xs font-bold text-slate-300">
                         Tidak ada staf yang cocok dengan filter.
                       </td>
                     </tr>
@@ -893,6 +1085,23 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ profile }) => 
                                 {isActive ? 'Aktif' : 'Nonaktif'}
                               </span>
                             </div>
+                          </td>
+
+                          {/* Aksi */}
+                          <td className="px-3 py-2 text-center">
+                            {isNotaris ? (
+                              <button
+                                onClick={() => setResetTarget({ id: staff.id, name: staff.full_name })}
+                                title={`Reset password ${staff.full_name}`}
+                                className="inline-flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 rounded-lg px-1.5 py-1 transition-all"
+                              >
+                                <KeyRound className="h-3.5 w-3.5" />
+                              </button>
+                            ) : (
+                              <div title="Hanya Notaris yang dapat mereset password" className="inline-flex items-center justify-center">
+                                <KeyRound className="h-3.5 w-3.5 text-slate-200" />
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
