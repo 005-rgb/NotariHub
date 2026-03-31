@@ -45,7 +45,7 @@ const DEFAULT_STYLE = { dot: 'bg-zinc-300', badge: 'bg-zinc-50 text-zinc-600 bor
 const SkeletonRow: React.FC<{ index: number }> = ({ index }) => (
   <tr style={{ opacity: 1 - index * 0.1 }}>
     {[32, 80, 140, 70, 110, 80].map((w, i) => (
-      <td key={i} className="px-5 py-4">
+      <td key={i} className="px-5 py-2.5">
         <div className="h-2.5 rounded-full bg-zinc-100 animate-pulse" style={{ width: w }} />
       </td>
     ))}
@@ -280,19 +280,19 @@ export const ReportsDirectory: React.FC = () => {
                     className="group border-b border-zinc-50 hover:bg-gold/5 cursor-pointer transition-colors duration-150"
                   >
                     {/* No */}
-                    <td className="px-5 py-4 text-center">
+                    <td className="px-5 py-2.5 text-center">
                       <span className="text-[11px] font-bold text-slate-300">{idx + 1}</span>
                     </td>
 
                     {/* Kode Ajuan */}
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-2.5">
                       <span className="text-[11px] font-black text-navy/60 font-mono tracking-tight">
                         {kode}
                       </span>
                     </td>
 
                     {/* Nama Konsumen */}
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-2.5">
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs font-black text-navy uppercase tracking-tight truncate max-w-[180px] group-hover:text-gold transition-colors">
                           {row.client_name}
@@ -302,19 +302,19 @@ export const ReportsDirectory: React.FC = () => {
                     </td>
 
                     {/* Katalog */}
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-2.5">
                       <span className="inline-block rounded-md bg-navy/5 px-2 py-0.5 text-[10px] font-black text-navy uppercase tracking-wide border border-navy/10">
                         {row.catalog_code}
                       </span>
                     </td>
 
                     {/* Tanggal Masuk */}
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-2.5">
                       <span className="text-[11px] text-slate-500 font-medium">{dateStr}</span>
                     </td>
 
                     {/* Status Terakhir */}
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-2.5">
                       <div className="flex items-center gap-2">
                         <div className={cn('h-1.5 w-1.5 rounded-full shrink-0', style.dot)} />
                         <span className={cn(

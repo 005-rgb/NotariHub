@@ -38,7 +38,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ profile, collapsed, setCollapsed }) => {
   const navigate = useNavigate();
   const { settings } = useFeatures();
-  const { setIsSubmissionModalOpen, showToast } = useUi();
+  const { setIsSubmissionModalOpen } = useUi();
 
   const handleLogout = () => {
     NotaryHttpClient.clearSession();
@@ -51,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ profile, collapsed, setCollaps
       items: [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: Users2, label: 'Direktori Konsumen', path: '/consumers' },
+        { icon: FileBarChart, label: 'Direktori Laporan', path: '/reports' },
         { icon: FilePenLine, label: 'Update Ajuan', path: '/update-ajuan' },
       ]
     },
@@ -74,7 +75,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ profile, collapsed, setCollaps
           path: '/ai-assistant',
           isAi: true
         },
-        { icon: FileBarChart, label: 'Direktori Laporan', path: '/reports' },
       ]
     }
   ];
@@ -191,22 +191,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ profile, collapsed, setCollaps
                   );
                 })}
 
-                {/* Laporan Keuangan — Disabled (Coming Soon) */}
-                {idx === menuGroups.length - 1 && (
-                  <button
-                    onClick={() => showToast('Modul Keuangan belum tersedia')}
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-200 text-slate-400 opacity-50 cursor-not-allowed hover:bg-white/5"
-                  >
+                {/* Laporan Keuangan — Coming Soon (after Main Navigation group) */}
+                {idx === 0 && (
+                  <div className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold opacity-40 grayscale pointer-events-none text-slate-400">
                     <BadgeDollarSign className="h-5 w-5 shrink-0" />
                     {!collapsed && (
                       <>
                         <span className="flex-1 text-left truncate">Laporan Keuangan</span>
-                        <span className="shrink-0 text-[8px] font-black uppercase tracking-widest bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-md">
-                          Soon
+                        <span className="shrink-0 text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+                          Coming Soon
                         </span>
                       </>
                     )}
-                  </button>
+                  </div>
                 )}
               </div>
             </div>
