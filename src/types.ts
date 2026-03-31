@@ -1,4 +1,11 @@
-export type UserRole = 'NOTARIS' | 'STAF_UTAMA' | 'STAF_LAPANGAN' | 'SUPER_ADMIN';
+export type UserRole =
+  | 'NOTARIS'
+  | 'STAF_UTAMA'
+  | 'STAF_LAPANGAN'
+  | 'SUPER_ADMIN'
+  | 'ASISTEN_NOTARIS'
+  | 'STAF_KEUANGAN'
+  | 'STAF_ADMINISTRASI';
 
 export interface UserProfile {
   id: string;
@@ -21,9 +28,12 @@ export interface StaffMember {
   id: string;
   tenant_id: string;
   username: string;
+  full_name: string;
   email: string;
   role: UserRole;
   status: 'ACTIVE' | 'INACTIVE';
+  workload: number;
+  joined_at: string;
 }
 
 export interface JWTPayload {

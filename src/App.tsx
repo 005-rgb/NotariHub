@@ -10,6 +10,7 @@ import { ConsumerDirectory } from './components/ConsumerDirectory';
 import { ConsumerProfilePage } from './components/ConsumerProfilePage';
 import { UpdateAccess } from './components/UpdateAccess';
 import { ReportsDirectory } from './components/ReportsDirectory';
+import { StaffManagement } from './components/StaffManagement';
 import { IdentityGuard } from './components/IdentityGuard';
 import { Loader2, UserCircle } from 'lucide-react';
 import { UserProfile } from './types';
@@ -24,11 +25,11 @@ export default function App() {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('userRole') || 'NOTARIS');
 
   const toggleRole = () => {
-    const roles = ['NOTARIS', 'STAF_UTAMA', 'SUPER_ADMIN'];
+    const roles = ['NOTARIS', 'ASISTEN_NOTARIS', 'STAF_KEUANGAN', 'STAF_ADMINISTRASI', 'STAF_LAPANGAN', 'SUPER_ADMIN'];
     const nextRole = roles[(roles.indexOf(currentRole) + 1) % roles.length];
     localStorage.setItem('userRole', nextRole);
     setCurrentRole(nextRole);
-    window.location.reload(); // Reload to apply role change across app
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -130,12 +131,9 @@ export default function App() {
             <Route
               path="/staff"
               element={
-                <IdentityGuard requiredRole="NOTARIS">
+                <IdentityGuard>
                   <LayoutWrapper profile={profile}>
-                    <div className="glass-card rounded-3xl p-12 ring-1 ring-gold/10">
-                      <h2 className="text-2xl font-black text-navy uppercase tracking-tight">Staff Management</h2>
-                      <p className="mt-2 text-sm font-medium text-slate">Manage your office staff and their access levels.</p>
-                    </div>
+                    <StaffManagement profile={profile} />
                   </LayoutWrapper>
                 </IdentityGuard>
               }
