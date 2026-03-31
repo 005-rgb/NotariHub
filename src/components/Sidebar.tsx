@@ -6,8 +6,6 @@ import {
   Settings, 
   LogOut, 
   ShieldCheck, 
-  FileText, 
-  BookOpen, 
   Users2, 
   PieChart,
   Zap,
@@ -20,7 +18,10 @@ import {
   Scale,
   Heart,
   Globe,
-  FilePenLine
+  FilePenLine,
+  FileBarChart,
+  BadgeDollarSign,
+  FileText,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { NotaryHttpClient } from '../lib/NotaryHttpClient';
@@ -37,7 +38,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ profile, collapsed, setCollapsed }) => {
   const navigate = useNavigate();
   const { settings } = useFeatures();
-  const { setIsSubmissionModalOpen } = useUi();
+  const { setIsSubmissionModalOpen, showToast } = useUi();
 
   const handleLogout = () => {
     NotaryHttpClient.clearSession();
@@ -73,12 +74,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ profile, collapsed, setCollaps
           path: '/ai-assistant',
           isAi: true
         },
-        { icon: PieChart, label: 'Laporan', path: '/reports' },
+        { icon: FileBarChart, label: 'Direktori Laporan', path: '/reports' },
       ]
     }
   ];
 
-  // Admin items
   const adminItems = [
     { icon: Users, label: 'Staff Management', path: '/staff', roles: ['NOTARIS', 'STAF_UTAMA'] },
     { icon: Settings, label: 'Tenant Settings', path: '/tenant-settings', roles: ['NOTARIS'] },
@@ -190,6 +190,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ profile, collapsed, setCollaps
                     </NavLink>
                   );
                 })}
+
+                {/* Laporan Keuangan — Disabled (Coming Soon) */}
+                {idx === menuGroups.length - 1 && (
+                  <button
+                    onClick={() => showToast('Modul Keuangan belum tersedia')}
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-200 text-slate-400 opacity-50 cursor-not-allowed hover:bg-white/5"
+                  >
+                    <BadgeDollarSign className="h-5 w-5 shrink-0" />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 text-left truncate">Laporan Keuangan</span>
+                        <span className="shrink-0 text-[8px] font-black uppercase tracking-widest bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-md">
+                          Soon
+                        </span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           ))}

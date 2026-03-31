@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react';
 import { FolderListItem } from '../types';
 
 interface UiContextType {
@@ -12,6 +12,8 @@ interface UiContextType {
   setIsConsumerDrawerOpen: (open: boolean) => void;
   selectedConsumer: FolderListItem | null;
   setSelectedConsumer: (consumer: FolderListItem | null) => void;
+  toast: string | null;
+  showToast: (message: string, duration?: number) => void;
 }
 
 const UiContext = createContext<UiContextType | undefined>(undefined);
@@ -22,6 +24,12 @@ export const UiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
   const [isConsumerDrawerOpen, setIsConsumerDrawerOpen] = useState(false);
   const [selectedConsumer, setSelectedConsumer] = useState<FolderListItem | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((message: string, duration = 3000) => {
+    setToast(message);
+    setTimeout(() => setToast(null), duration);
+  }, []);
 
   const value = useMemo(() => ({
     isSidebarOpen,
@@ -34,12 +42,16 @@ export const UiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setIsConsumerDrawerOpen,
     selectedConsumer,
     setSelectedConsumer,
+    toast,
+    showToast,
   }), [
     isSidebarOpen,
     isLivePulseOpen,
     isSubmissionModalOpen,
     isConsumerDrawerOpen,
     selectedConsumer,
+    toast,
+    showToast,
   ]);
 
   return (

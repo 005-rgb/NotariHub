@@ -9,6 +9,7 @@ import { AiOcrExtractor } from './components/AiOcrExtractor';
 import { ConsumerDirectory } from './components/ConsumerDirectory';
 import { ConsumerProfilePage } from './components/ConsumerProfilePage';
 import { UpdateAccess } from './components/UpdateAccess';
+import { ReportsDirectory } from './components/ReportsDirectory';
 import { IdentityGuard } from './components/IdentityGuard';
 import { Loader2, UserCircle } from 'lucide-react';
 import { UserProfile } from './types';
@@ -188,6 +189,16 @@ export default function App() {
                 <IdentityGuard>
                   <LayoutWrapper profile={profile}>
                     <AiOcrExtractor profile={profile} />
+                  </LayoutWrapper>
+                </IdentityGuard>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <IdentityGuard>
+                  <LayoutWrapper profile={profile}>
+                    <ReportsDirectory />
                   </LayoutWrapper>
                 </IdentityGuard>
               }

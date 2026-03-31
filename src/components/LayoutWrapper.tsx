@@ -4,16 +4,15 @@ import { Sidebar } from './Sidebar';
 import { HistoryTimeline } from './HistoryTimeline';
 import { UserProfile, FolderActivity } from '../types';
 import { cn } from '../lib/utils';
-import { Menu, X, Activity, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Menu, X, Activity, ChevronRight, AlertCircle } from 'lucide-react';
 import { SubmissionModal } from './SubmissionModal';
-import { ConsumerDetailDrawer } from './ConsumerDetailDrawer';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
   profile: UserProfile | null;
 }
 
-// Mock Activities for Live Pulse
 const MOCK_ACTIVITIES: FolderActivity[] = [
   {
     id: 'act-1',
@@ -49,14 +48,12 @@ export const LayoutWrapper: React.FC<LayoutWrapperProps> = ({ children, profile 
     setIsLivePulseOpen,
     isSubmissionModalOpen,
     setIsSubmissionModalOpen,
-    isConsumerDrawerOpen,
-    setIsConsumerDrawerOpen,
-    selectedConsumer
+    toast,
   } = useUi();
 
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans">
-      {/* Left Sidebar - 280px */}
+      {/* Left Sidebar */}
       <div className={cn(
         "transition-all duration-500 ease-in-out shrink-0 z-50",
         isSidebarOpen ? "w-[280px]" : "w-20"
@@ -100,13 +97,13 @@ export const LayoutWrapper: React.FC<LayoutWrapperProps> = ({ children, profile 
           </div>
         </header>
 
-        {/* Content with 32px padding */}
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           {children}
         </div>
       </main>
 
-      {/* Right Sidebar (Live Pulse) - 350px */}
+      {/* Right Sidebar (Live Pulse) */}
       <div className={cn(
         "transition-all duration-500 ease-in-out shrink-0 border-l border-zinc-200 bg-white z-50",
         isLivePulseOpen ? "w-[350px]" : "w-0 opacity-0 pointer-events-none"
@@ -137,16 +134,21 @@ export const LayoutWrapper: React.FC<LayoutWrapperProps> = ({ children, profile 
         profile={profile}
       />
 
-      {/* Consumer Detail Drawer */}
-      <ConsumerDetailDrawer
-        isOpen={isConsumerDrawerOpen}
-        onClose={() => setIsConsumerDrawerOpen(false)}
-        data={selectedConsumer}
-        profile={profile}
-        onStatusUpdate={(newStatus) => {
-          console.log('Status updated to:', newStatus);
-        }}
-      />
+      {/* Global Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.96 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 bg-[#0F172A] text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur"
+          >
+            <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
+            <span className="text-[11px] font-black uppercase tracking-[0.15em]">{toast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
