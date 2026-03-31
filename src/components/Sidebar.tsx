@@ -19,7 +19,8 @@ import {
   Home,
   Scale,
   Heart,
-  Globe
+  Globe,
+  FilePenLine
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { NotaryHttpClient } from '../lib/NotaryHttpClient';
@@ -49,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ profile, collapsed, setCollaps
       items: [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: Users2, label: 'Direktori Konsumen', path: '/consumers' },
+        { icon: FilePenLine, label: 'Update Ajuan', path: '/update-ajuan' },
       ]
     },
     {

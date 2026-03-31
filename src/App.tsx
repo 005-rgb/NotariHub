@@ -8,6 +8,7 @@ import { SuperAdminSettings } from './components/SuperAdminSettings';
 import { AiOcrExtractor } from './components/AiOcrExtractor';
 import { ConsumerDirectory } from './components/ConsumerDirectory';
 import { ConsumerProfilePage } from './components/ConsumerProfilePage';
+import { UpdateAccess } from './components/UpdateAccess';
 import { IdentityGuard } from './components/IdentityGuard';
 import { Loader2, UserCircle } from 'lucide-react';
 import { UserProfile } from './types';
@@ -157,6 +158,16 @@ export default function App() {
                 <IdentityGuard>
                   <LayoutWrapper profile={profile}>
                     <ConsumerDirectory profile={profile} />
+                  </LayoutWrapper>
+                </IdentityGuard>
+              }
+            />
+            <Route
+              path="/update-ajuan"
+              element={
+                <IdentityGuard>
+                  <LayoutWrapper profile={profile}>
+                    <UpdateAccess />
                   </LayoutWrapper>
                 </IdentityGuard>
               }

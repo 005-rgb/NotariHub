@@ -29,8 +29,9 @@ A multi-tenant SaaS platform for Indonesian notary offices. Provides legal docum
 - **Role-based access**: NOTARIS, STAF_UTAMA, SUPER_ADMIN roles
 - **Legal workflow**: Tracks folders through milestones (Validasi Pajak, Minuta, etc.)
 - **Consumer Directory** (`/consumers`): Full-featured virtualized table with incremental search, katalog/year filters, action buttons (WhatsApp, Print, Edit), and ConsumerDetailDrawer integration. Uses `react-window` + `react-virtualized-auto-sizer` for 60fps virtual scrolling at scale. RBAC: Edit button only visible for NOTARIS role.
+- **Update Ajuan** (`/update-ajuan`): Gateway search page before entering the consumer Timeline. Supports multi-entity live search (NIK, Kode Ajuan, No. Telp), QR code camera scanning via `html5-qrcode`, QR image drag-and-drop upload, and a gold "Lanjutkan ke Timeline" CTA button that is only active when a consumer is identified.
 - **AI OCR**: Document text extraction (PREMIUM/ENTERPRISE only)
-- **Client portal**: Auto-generated credentials for consumer document tracking
+- **Client portal**: Auto-generated credentials for consumer document tracking. QR code per ajuan is generated in `SubmissionSuccessModal` (downloadable) using `qrcode.react`.
 
 ## Development
 - **Start**: `npm run dev` (runs `tsx server.ts`)
